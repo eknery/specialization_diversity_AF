@@ -166,72 +166,84 @@ str(spp_niches_table)
 
 write.table(spp_niches_table, "spp_niches_table.csv", sep=',', quote= F, row.names=F)
 
-############################# comparative niche analyses ##############################
-library(ape)
-library(phytools)
-library(geiger)
-library(OUwie)
-library(nlme)
-
-### loading tree
-mcc=read.tree("C:/Users/eduar/Desktop/mcc_phylo.nwk")
+############################# niche structure ##############################
+library(tidyverse)
+library(PupillometryR)
+library(ggpubr)
+library(readr)
+library(tidyr)
 
 ### loading niche values
 spp_niches_table=read.table("spp_niches_table.csv", header =T, sep=",",  na.strings = "NA", fill=T)
 str(spp_niches_table)
 
-### median values
-median_spp_niches = aggregate(spp_niches_table[,2:5], by=list(spp_niches_table[,1]), median)
-env_trait = as.matrix(median_spp_niches[,2:5])
-rownames(env_trait) = median_spp_niches$Group.1
+### mean values
+mean_spp_niches = aggregate(spp_niches_table[,2:5], by=list(spp_niches_table[,1]), mean)
 
-### classifying
-AF=c("atlantica","baumgratziana","brunnea","budlejoides","capixaba", 
-     "castaneiflora","cinerascens","discolor","dura","fasciculata",
-     "formosa","hyemalis","kollmannii","kriegeriana","lymanii","mellina",
-     "octopetala","penduliflora","petroniana","polyandra","racemifera",
-     "robusta","ruschiana","setosociliata","shepherdii","valtheri","willdenowii")
+###### PCA 
+correlation = cor(mean_spp_niches[,2:5])
+pca = prcomp(mean_spp_niches[,2:5], scale=T, center = T)
+stdev = pca$sdev / sum(pca$sdev)
+pc_number =c("1", "2", "3", "4")
+stdev = data.frame(pc_number, stdev)
 
-distribution = median_spp_niches$Group.1
-distribution[distribution %in% AF] = "AF-endemic"
-distribution[distribution != "AF-endemic"] = "widespread"
+### randomization procedure 
+rand_correlation_list = vector('list', 99)
+rand_stdev_df = data.frame(matrix(0, nrow=1, ncol=4))
+rand_rotation_list = vector('list', 99)
 
-### geographic states
-states = distribution
-names(states) = median_spp_niches$Group.1
-
-### PCA
-pca = prcomp(median_spp_niches[,2:5], scale=T, center = T)
-pc_scores = data.frame(distribution, pca$x)
-pc_trait = pca$x[,1:2]
-rownames(pc_trait) = median_spp_niches$Group.1
-
-### simmap
-simmaps=make.simmap(mcc, x=states, model="ER", nsim=100)
-mean_map=summary(simmaps)
-
-# setting ancestral states
-anc_states= rep(NA, length(mean_map$ace[,1]))
-for (i in 1:length(mean_map$ace[,1])){
-  bool = mean_map$ace[i,] == max(mean_map$ace[i,])
-  high_prob_state = names(bool)[bool]
-  anc_states[i] = high_prob_state
+for (i in 1:99){
+  isothermality = mean_spp_niches[sample(1:nrow(mean_spp_niches)), 2]
+  precip_seasonality = mean_spp_niches[sample(1:nrow(mean_spp_niches)), 3]
+  solar_radiation = mean_spp_niches[sample(1:nrow(mean_spp_niches)), 4]
+  soil_pH = mean_spp_niches[sample(1:nrow(mean_spp_niches)), 5]
+  rand_mean_niches= cbind(isothermality, precip_seasonality, solar_radiation, soil_pH)
+  rand_correlation_list[[i]] = cor(rand_mean_niches)
+  rand_pca = prcomp(rand_mean_niches, scale=T)
+  rand_rotation_list[[i]] = rand_pca$rotation
+  rand_stdev = rand_pca$sdev/ sum(rand_pca$sdev)
+  rand_stdev_df = rbind(rand_stdev_df, rand_stdev)
 }
+rand_stdev_df = rand_stdev_df[-1,]
 
-names(anc_states) = row.names(mean_map$ace)
+### collecting stdev statistics
+rand_stdev_means = apply(rand_stdev_df, 2,FUN=mean)
+rand_stdev_quantiles = apply(rand_stdev_df, 2,FUN=function(x){quantile(x, probs = c(0.05,0.95))} )
+rand_stdev_stats= t(rbind(rand_stdev_means, rand_stdev_quantiles))
+rand_stdev_stats = data.frame(pc_number, rand_stdev_stats)
 
-# visual parameters
-edge_cols = anc_states
-edge_cols[edge_cols == 'AF-endemic'] = "green3"
-edge_cols[edge_cols == 'widespread'] = "magenta"
-node_cols = edge_cols[1:65]
-tip_cols = edge_cols[66:131]
-tip_cols = tip_cols[mcc$tip.label]
-cols = c(tip_cols, node_cols) 
-names(cols)= 1:(length(mcc$tip)+mcc$Nnode)
+### plotting
+tiff("PC_variance.tiff", units="in", width=3.5, height=3, res=600)
+ggplot(data=rand_stdev_stats, aes(x=pc_number, y=rand_stdev_means*100) ) +
+  geom_errorbar(aes(ymin=X5.*100, ymax=X95.*100), col="gray", size=1, width=0.25)+
+  geom_point(data=rand_stdev_stats, aes(y=rand_stdev_means*100), color="gray", size = 2) +
+  geom_point(data=stdev, aes(y=stdev*100), color="red", size = 2) +
+  labs(x="PC axis", y="% explained variance")+
+  theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=14,face="bold"),axis.text.x=element_text(size=12))
+dev.off()
+  
+### collecting rotation statistics
+rand_rotation_df = rand_rotation_list[[1]][,1]
+for (i in 2:length(rand_rotation_list) ){
+  rand_rotation_df = rbind(rand_rotation_df , rand_rotation_list[[i]][,1])
+}
+rand_rotation_means = apply(rand_rotation_df, 2,FUN=mean)
+rand_rotation_quantiles = apply(rand_rotation_df, 2,FUN=function(x){quantile(x, probs = c(0.05,0.95))} )
+rand_rotation_stats= t(rbind(rand_rotation_means, rand_rotation_quantiles))
+variable = c("1","2","3","4")
+rand_rotation_stats = data.frame(variable, rand_rotation_stats)
 
-### phylomorphospace
-phylomorphospace(mcc, env_trait[,1:2], label='off', control=list(col.node=cols))
+# observed rotation of PC1
+rotation = pca$rotation[,1]
+rotation = data.frame(variable, rotation)
 
-
-
+### ploting
+tiff("PC1_loadings.tiff", units="in", width=3.5, height=3, res=600)
+ggplot(data=rand_rotation_stats, aes(x=variable, y=rand_rotation_means) ) +
+  geom_errorbar(aes(ymin= X5., ymax= X95.), col="gray", size=1, width=0.25)+
+  geom_point(data=rand_rotation_stats, aes(y=rand_rotation_means), color="gray", size = 2) +
+  geom_point(data=rotation, aes(y=rotation), color="red", size = 2) +
+  labs(x="variable", y="PC1 loadings")+
+  scale_x_discrete(labels=c("1" = "therm", "2" = "precip", "3" = "solar", "4"="soil"))+
+  theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"), axis.title=element_text(size=14,face="bold"),axis.text.x=element_text(size=12))
+dev.off()
