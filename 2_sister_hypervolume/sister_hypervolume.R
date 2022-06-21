@@ -2,14 +2,10 @@ setwd("C:/Users/eduar/Documents/GitHub/specialization_diversity_AF")
 
 ### packages
 library(raster)
-library(sp)
-library(sf)
-library(spatialEco)
 library(rgeos)
 library(hypervolume)
 library(dismo)
 library(ape)
-
 
 #loading spp coordinates
 spp_points=read.table("0_data/spp_points_7km.csv", header =T, sep=",",  na.strings = "NA", fill=T)
@@ -125,7 +121,7 @@ for (sp_name in all_spp_names){
                                kde.bandwidth = sister_band, sd.count = 3, chunk.size = 100,
                                quantile.requested = sister_ths, quantile.requested.type = "probability")
   sister_hv_comparison[index,2] = sister_hv@Volume
-  # getting intersection
+  # getting intersection and union
   hv_set = hypervolume_set(sp_hv, sister_hv, check.memory = F)
   sister_hv_comparison[index,3] = hv_set[[3]]@Volume # taking intersection
   sister_hv_comparison[index,4] = hv_set[[4]]@Volume # taking union
@@ -158,4 +154,4 @@ sister_hv_distance = data.frame(spp_geographic_distribution$state, all_spp_names
 colnames(sister_hv_distance) = c("state", "species", "distance_to_sister", "divergence_time")
 
 #exporting
-write.table(position_distance, "position_distance.csv", sep=',', quote=F, row.names=T)
+write.table(sister_hv_distance, "2_sister_hypervolume/sister_hv_distance.csv", sep=',', quote=F, row.names=T)
