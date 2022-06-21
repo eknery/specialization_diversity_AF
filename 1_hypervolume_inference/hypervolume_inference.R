@@ -22,6 +22,9 @@ ras3 = raster("0_data/rasters/solar_radiation")
 ras4 = raster("0_data/rasters/soil_pH.gri")
 env_ras= stack(ras1,ras2,ras3,ras4)
 
+
+################################## data preparation ###########################
+
 ### croping rasters
 #set extent
 ext=extent(-100, -33, -34, 24)
@@ -32,7 +35,6 @@ for (i in 2:length(env_ras@layers) ){
 }
 crop_env_ras = allras_crop
 
-################################## data preparation ###########################
 
 ### keeping mean and sd values
 ras_means= cellStats(crop_env_ras, stat='mean', na.rm=TRUE)
