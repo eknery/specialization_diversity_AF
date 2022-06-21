@@ -6,16 +6,20 @@ library(phytools)
 library(geiger)
 library(OUwie)
 
-# loading environmental  niche
+### loading environmental  niche
 spp_niches_table=read.table("spp_niches_table.csv", header =T, sep=",",  na.strings = "NA", fill=T)
-str(spp_niches_table)
+# adjusting scale
+spp_niches_table$solar_radiation = spp_niches_table$solar_radiation *10^-3
+spp_niches_table$soil_pH = spp_niches_table$soil_pH *10^-1
 
 ### mean and se values
 mean_spp_niches = aggregate(spp_niches_table[,2:5], by=list(spp_niches_table[,1]), mean)
+sd_spp_niches =  aggregate(spp_niches_table[,2:5], by=list(spp_niches_table[,1]), sd)
+se_spp_niches = aggregate(spp_niches_table[,2:5], by=list(spp_niches_table[,1]), function(x){sd(x)/sqrt(100)} )
+
+### trait matrix
 env_traits = as.matrix(mean_spp_niches[,2:5])
 rownames(env_traits) = mean_spp_niches$Group.1
-
-se_spp_niches = aggregate(spp_niches_table[,2:5], by=list(spp_niches_table[,1]), function(x){sd(x)/sqrt(100)} )
 
 ### loading trees
 mcc=read.tree("mcc_phylo.nwk")
@@ -42,16 +46,16 @@ simmaps=make.simmap(mcc, x=states, model="ER", nsim=100)
 mean_map=summary(simmaps)
 
 # setting ancestral states
-anc_states= rep(NA, length(mean_map$ace[,1]))
+all_states= rep(NA, length(mean_map$ace[,1]))
 for (i in 1:length(mean_map$ace[,1])){
   bool = mean_map$ace[i,] == max(mean_map$ace[i,])
   high_prob_state = names(bool)[bool]
-  anc_states[i] = high_prob_state
+  all_states[i] = high_prob_state
 }
-names(anc_states) = row.names(mean_map$ace)
+names(all_states) = row.names(mean_map$ace)
 
 # visual parameters
-edge_cols = anc_states
+edge_cols = all_states
 edge_cols[edge_cols == 'AF-endemic'] = "green3"
 edge_cols[edge_cols == 'widespread'] = "magenta"
 node_cols = edge_cols[1:65]
@@ -61,7 +65,9 @@ cols = c(tip_cols, node_cols)
 names(cols)= 1:(length(mcc$tip)+mcc$Nnode)
 
 ### phylomorphospace
-phylomorphospace(mcc, env_trait[,c(1,3)], label='off', control=list(col.node=cols))
+phylomorphospace(mcc, env_traits[,c(1,2)], label='off', control=list(col.node=cols))
+phylomorphospace(mcc, env_traits[,c(3,4)], label='off', control=list(col.node=cols))
+phylomorphospace(mcc, env_traits[,c(1,4)], label='off', control=list(col.node=cols))
 
 ########################## fitting evolutionary models ##########################
 
@@ -72,13 +78,13 @@ fit_evo_models = function(tree, regimes, models_to_fit){
   # reconstructing ancestral states
   simmaps=make.simmap(tree, x=states, model="ER", nsim=100)
   mean_map=summary(simmaps)
-  anc_states= rep(NA, length(mean_map$ace[,1]))
+  all_states= rep(NA, length(mean_map$ace[,1]))
   for (i in 1:length(mean_map$ace[,1])){
     bool = mean_map$ace[i,] == max(mean_map$ace[i,])
     high_prob_state = names(bool)[bool]
-    anc_states[i] = high_prob_state
+    all_states[i] = high_prob_state
   }
-  tree$node.label=anc_states[1:65]
+  tree$node.label=all_states[1:65]
   #setting fitting tables
   model_fit_table = data.frame(matrix(NA, nrow= length(models_to_fit), ncol=3))
   colnames(model_fit_table) = c("model","llik","aicc")
@@ -188,8 +194,29 @@ colnames(all_best_estimates_df)[1] = "model"
 write.table(all_best_models, "solar_best_models.csv", sep=',', quote=F, row.names = F)
 write.table(all_best_estimates_df, "solar_best_estimates.csv", sep=',', quote=F, row.names = F)
 
-############################ estimating neutral evolution ######################
+############################ comparing to neutral evolution ######################
+library(tidyverse)
+library(PupillometryR)
+library(ggpubr)
+library(readr)
+library(tidyr)
+library(ggplot2)
+library(Hmisc)
+library(plyr)
+library(RColorBrewer)
+library(reshape2)
 
+### mean and se trait values per group
+mean_group_niches = aggregate(mean_spp_niches[,2:5], by=list(distribution), mean)
+se_group_niches = aggregate(mean_spp_niches[,2:5], by=list(distribution), function(x){sd(x)/sqrt(length(x))} )
+
+isotherm = data.frame(mean_group_niches$Group.1,mean_group_niches$isothermality, se_group_niches$isothermality)
+precip = data.frame(mean_group_niches$Group.1,mean_group_niches$precip_seasonality, se_group_niches$precip_seasonality)
+solar = data.frame(mean_group_niches$Group.1,mean_group_niches$solar_radiation, se_group_niches$solar_radiation)
+soil = data.frame(mean_group_niches$Group.1,mean_group_niches$soil_pH, se_group_niches$soil_pH)
+colnames(isotherm) = colnames(precip) = colnames(solar) = colnames(soil) = c("group", "trait", "se")
+
+###
 regimes = data.frame(mean_spp_niches$Group.1, distribution, mean_spp_niches$precip_seasonality, se_spp_niches$precip_seasonality)
 colnames(regimes) = c("species","state", "trait", "se") 
 
@@ -200,13 +227,13 @@ for (i in 1:length(trees)){
   one_tree=trees[[i]]
   simmaps=make.simmap(one_tree, x=states, model="ER", nsim=100)
   mean_map=summary(simmaps)
-  anc_states= rep(NA, length(mean_map$ace[,1]))
+  all_states= rep(NA, length(mean_map$ace[,1]))
   for (j in 1:length(mean_map$ace[,1])){
     bool = mean_map$ace[j,] == max(mean_map$ace[j,])
     high_prob_state = names(bool)[bool]
-    anc_states[j] = high_prob_state
+    all_states[j] = high_prob_state
   }
-  one_tree$node.label=anc_states[1:65]
+  one_tree$node.label=all_states[1:65]
   fit=OUwie(one_tree, regimes, model="BM1",  mserr = "known", ub=Inf)
   bm_fits[[i]]=fit
 }
@@ -241,3 +268,62 @@ colnames(bm_simulations)<-c("AF-endemic","widespread")
 
 write.table(bm_simulations,"precip_bm_simulations.csv", sep=",", quote=F, row.names=F)
 
+### comparing observed and simulated traits
+sim = 'C:/Users/eduar/Documents/GitHub/specialization_diversity_AF/BM simulations/precip_bm_simulations.csv'
+bm_simulations = read.table(sim,sep=',', h=T)
+
+# organizing into dataframe
+column_names = colnames(bm_simulations)
+distribution = c( rep(column_names[1], nrow(bm_simulations)) , rep(column_names[2], nrow(bm_simulations)))
+bm_simulations_df = data.frame(distribution, c(bm_simulations[,1],bm_simulations[,2]) )
+colnames(bm_simulations_df)[2] = 'trait'
+
+# plotting
+bm_plot = ggplot(data=bm_simulations_df,aes(x=trait) ) +
+  geom_density(colour= "lightgray", fill="lightgray", alpha=0.20) +
+  scale_colour_manual(values=c("green3","magenta"))+
+  scale_fill_manual(values=c("green3","magenta"))+
+  geom_vline(data=precip,aes(xintercept = trait),linetype="solid",colour=c("green3","magenta"), size=1)+
+  geom_vline(data=precip,aes(xintercept = trait-se),linetype="dotted",colour=c("green3","magenta"), size=0.50)+
+  geom_vline(data=precip,aes(xintercept = trait+se),linetype="dotted",colour=c("green3","magenta"), size=0.50)+
+  labs(x="precipitation\n seasonality", y="density")+
+  theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=14,face="bold"),axis.text.x=element_text(size=12),legend.position = "none")
+
+tiff("bm_precip.tiff", units="in", width=3.5, height=3, res=600)
+bm_plot
+dev.off()
+
+
+############################## estimating evolutionary rates ########################
+
+library(RRphylo)
+
+### ridge regression
+ridge = RRphylo(tree=mcc,y=env_traits[,3])
+rates=round(ridge$rates,2)
+
+### simmap
+simmaps=make.simmap(trees[30], x=states, model="ER", nsim=100)
+mean_map=summary(simmaps)
+
+# setting ancestral states
+all_states= rep(NA, length(mean_map$ace[,1]))
+for (i in 1:length(mean_map$ace[,1])){
+  bool = mean_map$ace[i,] == max(mean_map$ace[i,])
+  high_prob_state = names(bool)[bool]
+  all_states[i] = high_prob_state
+}
+names(all_states) = row.names(mean_map$ace)
+
+af_rates = rates[all_states == "AF-endemic"]
+ws_rates = rates[all_states == "widespread"]
+min_rate=min(rates)
+max_rate=max(rates)
+
+par(mfrow=(c(2,1)))
+hist(af_rates, xlim=c(min_rate,max_rate))
+hist(ws_rates, xlim=c(min_rate,max_rate))
+sd(af_rates)
+sd(ws_rates)
+
+shift = search.shift(ridge, status.type = "sparse", state=states, filename="test")

@@ -38,7 +38,6 @@ for (i in 2:length(env_ras@layers) ){
 }
 crop_env_ras = allras_crop
 
-
 ############################ MaxEnt modeling  ########################
 
 ### setting kfold validation function
@@ -110,26 +109,37 @@ mean_performance = aggregate(performance_table[,-1], by= list(performance_table[
 mean_performance
 write.table(mean_performance,"mean_performance.csv", sep=",", row.names = F, quote = F)
 
-####################### comparing niche similarity ##################
 
+########################## niche overlap #####################################
 spp_names = unique(spp_points$species)
-warren_table = data.frame(matrix(NA, nrow=length(spp_names), ncol=length(spp_names)))
-colnames(warren_table) = spp_names
-rownames(warren_table) = spp_names
+overlap_table = data.frame(matrix(NA, nrow=length(spp_names), ncol=length(spp_names)))
+colnames(overlap_table) = spp_names
+rownames(overlap_table) = spp_names
 
 for (j in 1:length(spp_names)) {
   j_name = spp_names[j]
   j_sp = spp_points[spp_points$species == j_name,2:3]
+  j_me = maxent(x=crop_env_ras, p=j_sp, a=bg_points, removeDuplicates=T)
+  j_proj = predict(j_me, crop_env_ras)
   for (i in j:length(spp_names)){
     i_name = spp_names[i]
     i_sp = spp_points[spp_points$species == i_name,2:3]
-    niche_eq = nicheEquivalency(sp1=j_sp, sp2=i_sp, predictors=crop_env_ras, n=1, model=maxent)
-    warren_table[i,j] = niche_eq$statistic[2]
+    i_me = maxent(x=crop_env_ras, p=i_sp, a=bg_points, removeDuplicates=T)
+    i_proj = predict(i_me, crop_env_ras)
+    overlap_table[i,j] =nicheOverlap(j_proj, i_proj, stat='I', mask=F, checkNegatives=TRUE)
   }
 }
 
-write.table(warren_table, "warren_table.csv", sep=',', quote= F, row.names=F)
+write.table(overlap_table, "overlap_table.csv", sep=',', quote= F, row.names=T)
 
+af_table = overlap_table[rownames(overlap_table) %in% AF, colnames(overlap_table) %in% AF ]
+ws_table = overlap_table[!rownames(overlap_table) %in% AF, !colnames(overlap_table) %in% AF ]
+
+af_means = apply(af_table, MARGIN=1, FUN=mean, na.rm=T)
+ws_means = apply(ws_table, MARGIN=1, FUN=mean, na.rm=T)
+
+mean(af_means)
+mean(ws_means)
 
 ######################### inferring environmental niche ###########################
 
@@ -165,6 +175,7 @@ spp_niches_table = spp_niches_table[-1,]
 str(spp_niches_table)
 
 write.table(spp_niches_table, "spp_niches_table.csv", sep=',', quote= F, row.names=F)
+
 
 ############################# niche structure ##############################
 library(tidyverse)
