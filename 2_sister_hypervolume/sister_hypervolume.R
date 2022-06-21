@@ -127,8 +127,12 @@ for (sp_name in all_spp_names){
   sister_hv_comparison[index,4] = hv_set[[4]]@Volume # taking union
 }
 
-sister_hv_comparison = data.frame(spp_geographic_distribution$state, all_spp_names, sister_hv_comparison, sister_divergence_time$sister_divergence)
-colnames(sister_hv_comparison) =c("state", "species", "sp_hvolume", "sister_hvolume", "intersection", "union", "divergence_time")
+# minimal hv per sister pair
+min_hv = apply(sister_hv_comparison[,1:2], MARGIN = 1, FUN= min)
+
+# dataframe
+sister_hv_comparison = data.frame(spp_geographic_distribution$state, all_spp_names, sister_hv_comparison, min_hv, sister_divergence_time$sister_divergence)
+colnames(sister_hv_comparison) =c("state", "species", "sp_hvolume", "sister_hvolume", "intersection", "union", "minimal_hvolume", "divergence_time")
 
 # exporting
 write.table(sister_hv_comparison, "2_sister_hypervolume/sister_hv_comparison.csv", sep=",", quote=F, row.names = F)
