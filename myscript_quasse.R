@@ -23,14 +23,6 @@ shapiro.test(sqrt(hvolumes))
 sq_hvolume = sqrt(hvolumes)
 se_hvolume = sd(sq_hvolume)/length(sq_hvolume)
 
-### expected effect of independent variable
-exp_effect = max(sq_hvolume) - min(sq_hvolume) / min(sq_hvolume)
-
-### setting linear function
-
-xr = c( range(hvolumes)[1]/start_values["diffusion"],  range(hvolumes)[2]*start_values["diffusion"] )
-linear.x = make.linear.x(x0=xr[1], x1=xr[2])
-
 ############################### fitting models across trees  ##########################
 const_params = c()
 linear_params = c()
@@ -42,6 +34,9 @@ for (i in 1:length(phylo_trees)){
   one_tree = phylo_trees[[i]]
   ### starting parameter values
   start_values = starting.point.quasse(one_tree, states=hvolumes)
+  ### setting linear function
+  xr = c( range(hvolumes)[1]/start_values["diffusion"],  range(hvolumes)[2]*start_values["diffusion"] )
+  linear.x = make.linear.x(x0=xr[1], x1=xr[2])
   ### setting quasse functions
   # constant
   quasse_const =  make.quasse(one_tree, states=hvolumes, states.sd=se_hvolume , lambda=constant.x, mu=constant.x, sampling.f=0.9)
@@ -82,9 +77,9 @@ for (i in 1:length(phylo_trees)){
   linear= c(linear_mle$lnLik, length(linear_mle$par))
   sigm= c(sigm_mle$lnLik, length(const_mle$par))
   fit_values = rbind(const, linear, sigm)
-  model_fits[[1]] = fit_values
+  model_fits[[i]] = fit_values
   ### update!
-  print(paste("Loop iterarion:", as.character(i) ) )
+  print(paste("Time:", Sys.time(), "Loop iterarion:", as.character(i) ) )
 }
 
 ######### visualizing #################################
