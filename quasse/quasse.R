@@ -14,10 +14,7 @@ spp_hvolumes = read.table("1_hypervolume_inference/spp_hvolumes.csv", h=T, sep="
 ### setting trait vector
 hvolumes = spp_hvolumes$hvolume
 names(hvolumes) = spp_hvolumes$specie
-hist(sqrt(hvolumes), breaks=10)
-shapiro.test(sqrt(hvolumes))
-trait_values= sqrt(hvolumes)
-
+trait_values= hvolumes
 
 ### sampling error
 se_trait = sd(trait_values)/length(trait_values)
@@ -28,56 +25,57 @@ linear_params = c()
 sigm_params = c()
 model_fits = list()
 
-### stopped at 24, start from 25 !!!!
+### setting optimization settings
+control = list(method= "fftC", parscale=0.1, reltol=0.001)
+
+### setting linear function
+xr = range(trait_values) + 10*c(-se_trait, se_trait)
+linear.x = make.linear.x(x0=xr[1], x1=xr[2])
 
 for (i in 1:length(phylo_trees)){
-  ### pick a phylogeentic tree
+  ### pick a phylogenetic tree
+  i = 1
   one_tree = phylo_trees[[i]] 
   ### starting parameter values
   start_values = starting.point.quasse(one_tree, states=trait_values)
-  ### setting linear function
-  xr = range(trait_values)  +  c(-1,1)  *  3  * start_values["diffusion"]
-  linear.x = make.linear.x(x0=xr[1], x1=xr[2])
   ### setting quasse functions
   # constant
-  quasse_const =  make.quasse(one_tree, states=trait_values, states.sd=se_trait , lambda=constant.x, mu=constant.x, sampling.f=0.9)
-  quasse_const = constrain(quasse_const, drift ~ 0)
+  const =  make.quasse(one_tree, states=trait_values, states.sd=se_trait , lambda=constant.x, mu=constant.x, sampling.f=0.9)
+  #const = constrain(const, drift ~ 0)
   # linear
-  quasse_linear = make.quasse(one_tree,  states=trait_values, states.sd=se_trait , lambda=linear.x, mu=constant.x, sampling.f=0.9)
-  quasse_linear = constrain(quasse_linear, drift ~ 0)
+  linear = make.quasse(one_tree,  states=trait_values, states.sd=se_trait , lambda=linear.x, mu=constant.x, sampling.f=0.9)
+  #linear = constrain(linear, drift ~ 0)
   # sigmoid
-  quasse_sigm = make.quasse(one_tree, states=trait_values, states.sd=se_trait , lambda=sigmoid.x, mu=constant.x, sampling.f=0.9)
-  quasse_sigm = constrain(quasse_sigm, drift ~ 0)
-  ### setting and optimizing functions
-  ## optimization control
-  control = list(parscale=.1, reltol=0.001)
+  sigm = make.quasse(one_tree, states=trait_values, states.sd=se_trait , lambda=sigmoid.x, mu=constant.x, sampling.f=0.9)
+  #sigm = constrain(sigm, drift ~ 0)
+  ### optimization
   ## constant
   # initial values
-  init_const = c(start_values[1], start_values[2], start_values[3])
-  lower_const = c(0,0,0)
-  names(lower_const) = names(init_const) = argnames(quasse_const)
+  init_const = c(start_values[1], start_values[2], 0.01, start_values[3])
+  lower_const = c(0,0,0,0)
+  names(lower_const) = names(init_const) = argnames(const)
   # finding constant mle
-  const_mle = find.mle(quasse_const, x.init=init_const, lower=lower_const, control=control)
-  const_params= rbind(const_params, const_mle$par)
+  mle_const = find.mle(const, x.init=init_const, lower=lower_const, control=control)
+  const_params = rbind(const_params, mle_const$par)
   ## linear 
   # initial values
-  init_linear = c(const_mle$par[1], lm=0, const_mle$par[2:3])
-  names(init_linear) = argnames(quasse_linear)
+  init_linear = c(mle_const$par[1], lm=0.01, mle_const$par[2], mle_const$par[3:4])
+  names(init_linear) = argnames(linear)
   # finding linear mle
-  linear_mle = find.mle(quasse_linear, x.init=init_linear, control=control)
-  linear_params= rbind(linear_params, linear_mle$par)
+  mle_linear = find.mle(linear, x.init=init_linear, control=control)
+  linear_params = rbind(linear_params, mle_linear$par)
   ## sigmoid 
   # initial values
-  init_sigm =  c(const_mle$par[1], const_mle$par[1], l.xmid=mean(xr), lr=1, const_mle$par[2:3])
-  names(init_sigm) = argnames(quasse_sigm)
+  init_sigm = c(mle_const$par[1], mle_const$par[1], l.xmid=mean(xr), lr=1, mle_const$par[3:4])
+  names(init_sigm) = argnames(sigm)
   # finding sigmoid mle
-  sigm_mle = find.mle(quasse_sigm, x.init=init_sigm, control=control)
-  sigm_params= rbind(sigm_params, sigm_mle$par)
+  mle_sigm = find.mle(sigm, x.init=init_sigm, control=control)
+  sigm_params= rbind(sigm_params, mle_sigm$par)
   ### summarizing model fit
-  const= c(lnlik= const_mle$lnLik, n_par=length(const_mle$par))
-  linear= c(linear_mle$lnLik, length(linear_mle$par))
-  sigm= c(sigm_mle$lnLik, length(sigm_mle$par))
-  fit_values = rbind(const, linear, sigm)
+  const_fit = c(lnlik= mle_const$lnLik, n_par=length(mle_const$par))
+  linear_fit = c(mle_linear$lnLik, length(mle_linear$par))
+  sigm_fit = c(mle_sigm$lnLik, length(mle_sigm$par))
+  fit_values = rbind(const_fit, linear_fit, sigm_fit)
   model_fits[[i]] = fit_values
   ### update!
   print(paste("Time:", Sys.time(), "Loop iterarion:", as.character(i) ) )
