@@ -11,19 +11,21 @@ phylo_trees = read.tree("0_data/100_rand_phylos.nwk")
 ### loading trait dataset
 spp_hvolumes = read.table("1_hypervolume_inference/spp_hvolumes.csv", h=T, sep=",")
 
-### setting discrete categories
-ths_value = 2.5 #median(spp_hvolumes$hvolume)
-states = spp_hvolumes$hvolume
-states[spp_hvolumes$hvolume < ths_value] = 1 #specialist
-states[spp_hvolumes$hvolume > ths_value] = 0 #generalist
-names(states) = spp_hvolumes$species
+### setting discrete states
+summary(spp_hvolumes$hvolume)
+ths_value = 2.69 
+trait_states = spp_hvolumes$hvolume
+trait_states[spp_hvolumes$hvolume <= ths_value] = 1 #specialist
+trait_states[spp_hvolumes$hvolume > ths_value] = 0 #generalist
+names(trait_states) = spp_hvolumes$species
+
+table(trait_states)
 
 ### bisse
 start_params = starting.point.bisse(mcc)
 
-bisse_full = make.bisse(mcc,  states)
+bisse_full = make.bisse(mcc,  trait_states)
 bisse_m_const  =  constrain(bisse_full,  mu0  ~  mu1)
-bisse_lm_const = constrain(bisse_full,  lambda0  ~  lambda1, mu0  ~  mu1)
 bisse_lm_const = constrain(bisse_full,  lambda0  ~  lambda1, mu0  ~  mu1)
 
 mle_full = find.mle(bisse_full, start_params)
