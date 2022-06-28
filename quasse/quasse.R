@@ -32,11 +32,11 @@ model_fits = list()
 
 for (i in 1:length(phylo_trees)){
   ### pick a phylogeentic tree
-  one_tree = phylo_trees[[1]] # !!!!!!!!
+  one_tree = phylo_trees[[i]] 
   ### starting parameter values
   start_values = starting.point.quasse(one_tree, states=trait_values)
   ### setting linear function
-  xr = c( range(trait_values)[1]/start_values["diffusion"],  range(trait_values)[2]+start_values["diffusion"] )
+  xr = range(trait_values)  +  c(-1,1)  *  3  * start_values["diffusion"]
   linear.x = make.linear.x(x0=xr[1], x1=xr[2])
   ### setting quasse functions
   # constant
@@ -83,32 +83,30 @@ for (i in 1:length(phylo_trees)){
   print(paste("Time:", Sys.time(), "Loop iterarion:", as.character(i) ) )
 }
 
-
 ### arranging into dara frame
 model_fits_df = data.frame()
 for (i in 1:length(model_fits)){
   model_fits_df = rbind(model_fits_df, model_fits[[i]])
 }
 
-write.table(model_fits_df, "quasse/1_24_model_fits_df.csv", sep=",", quote=F, row.names = T)
+### AIC = -2(log-likelihood) + 2K
+aic = -2*model_fits_df$lnlik +2*(model_fits_df$n_par)
+### AiC = AIC - 2k(k+1) / (n-k-1)
+aicc = aic -2*(model_fits_df$n_par+1)/(66-model_fits_df$n_par-1)
+### adding
+model_fits_df = data.frame(model_fits_df, aic, aicc)
 
+### exporting
+write.table(model_fits_df, "quasse/model_fits_df.csv", sep=",", quote=F, row.names = T)
 write.table(const_params, "quasse/const_params.csv", sep=",", quote=F, row.names = F)
 write.table(linear_params, "quasse/linear_params.csv", sep=",", quote=F, row.names = F)
 write.table(sigm_params, "quasse/sigm_params.csv", sep=",", quote=F, row.names = F)
 
 ########################### choosing the best ###########################
 
-model_fits_df= read.table("4_quasse/1_24_model_fits_df.csv", sep=",", h = T)
-
-### AIC = -2(log-likelihood) + 2K
-aic = -2*model_fits_df$lnlik +2*(model_fits_df$n_par)
-### AIC - 2k(k+1) / (n-k-1)
-aicc = aic -2*(model_fits_df$n_par+1)/(66-model_fits_df$n_par-1)
-### adding
-model_fits_df = data.frame(model_fits_df, aic, aicc)
+model_fits_df= read.table("4_quasse/model_fits_df.csv", sep=",", h = T)
 
 final_set= nrow(model_fits_df)-2
-
 best_fit_per_tree =c()
 for (i in seq(from=1, to=final_set, by=3)){
   one_tree = model_fits_df[i:(i+2),]
