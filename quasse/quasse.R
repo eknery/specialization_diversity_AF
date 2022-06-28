@@ -13,15 +13,14 @@ spp_hvolumes = read.table("1_hypervolume_inference/spp_hvolumes.csv", h=T, sep="
 
 ### setting trait vector
 hvolumes = spp_hvolumes$hvolume
-names(hvolumes) = spp_hvolumes$species
+names(hvolumes) = spp_hvolumes$specie
+hist(sqrt(hvolumes), breaks=10)
+shapiro.test(sqrt(hvolumes))
+trait_values= sqrt(hvolumes)
 
-### testing trait normality
-hist(hvolumes)
-shapiro.test(hvolumes)
 
 ### sampling error
-sq_hvolume = sqrt(hvolumes)
-se_hvolume = sd(sq_hvolume)/length(sq_hvolume)
+se_trait = sd(trait_values)/length(trait_values)
 
 ############################### fitting models across trees  ##########################
 const_params = c()
@@ -33,21 +32,21 @@ model_fits = list()
 
 for (i in 1:length(phylo_trees)){
   ### pick a phylogeentic tree
-  one_tree = phylo_trees[[i]]
+  one_tree = phylo_trees[[1]] # !!!!!!!!
   ### starting parameter values
-  start_values = starting.point.quasse(one_tree, states=hvolumes)
+  start_values = starting.point.quasse(one_tree, states=trait_values)
   ### setting linear function
-  xr = c( range(hvolumes)[1]/start_values["diffusion"],  range(hvolumes)[2]*start_values["diffusion"] )
+  xr = c( range(trait_values)[1]/start_values["diffusion"],  range(trait_values)[2]+start_values["diffusion"] )
   linear.x = make.linear.x(x0=xr[1], x1=xr[2])
   ### setting quasse functions
   # constant
-  quasse_const =  make.quasse(one_tree, states=hvolumes, states.sd=se_hvolume , lambda=constant.x, mu=constant.x, sampling.f=0.9)
+  quasse_const =  make.quasse(one_tree, states=trait_values, states.sd=se_trait , lambda=constant.x, mu=constant.x, sampling.f=0.9)
   quasse_const = constrain(quasse_const, drift ~ 0)
   # linear
-  quasse_linear = make.quasse(one_tree,  states=hvolumes, states.sd=se_hvolume , lambda=linear.x, mu=constant.x, sampling.f=0.9)
+  quasse_linear = make.quasse(one_tree,  states=trait_values, states.sd=se_trait , lambda=linear.x, mu=constant.x, sampling.f=0.9)
   quasse_linear = constrain(quasse_linear, drift ~ 0)
   # sigmoid
-  quasse_sigm = make.quasse(one_tree, states=hvolumes, states.sd=se_hvolume , lambda=sigmoid.x, mu=constant.x, sampling.f=0.9)
+  quasse_sigm = make.quasse(one_tree, states=trait_values, states.sd=se_trait , lambda=sigmoid.x, mu=constant.x, sampling.f=0.9)
   quasse_sigm = constrain(quasse_sigm, drift ~ 0)
   ### setting and optimizing functions
   ## optimization control
@@ -91,11 +90,11 @@ for (i in 1:length(model_fits)){
   model_fits_df = rbind(model_fits_df, model_fits[[i]])
 }
 
-write.table(model_fits_df, "4_quasse/1_24_model_fits_df.csv", sep=",", quote=F, row.names = T)
+write.table(model_fits_df, "quasse/1_24_model_fits_df.csv", sep=",", quote=F, row.names = T)
 
-write.table(const_params, "4_quasse/const_params.csv", sep=",", quote=F, row.names = F)
-write.table(linear_params, "4_quasse/linear_params.csv", sep=",", quote=F, row.names = F)
-write.table(sigm_params, "4_quasse/sigm_params.csv", sep=",", quote=F, row.names = F)
+write.table(const_params, "quasse/const_params.csv", sep=",", quote=F, row.names = F)
+write.table(linear_params, "quasse/linear_params.csv", sep=",", quote=F, row.names = F)
+write.table(sigm_params, "quasse/sigm_params.csv", sep=",", quote=F, row.names = F)
 
 ########################### choosing the best ###########################
 

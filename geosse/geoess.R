@@ -21,14 +21,15 @@ geo_states[af_percentage > low_ths & af_percentage < high_ths] = "0"
 geo_states = as.numeric(geo_states)
 names(geo_states) = spp_count_domain$species
 
-### 
-start_geosse = starting.point.geosse(mcc)
-
+### make models
 geosse_full = make.geosse(mcc, states=geo_states, sampling.f=0.9)
 geosse_x_const = constrain(geosse_full, xA ~ xB)
 geosse_sx_const = constrain(geosse_full, sA ~ sB, xA ~ xB)
 
+### starting values
+start_geosse = starting.point.geosse(mcc)
 
+### find mle
 mle_geosse_full = find.mle(geosse_full, start_geosse)
 mle_geosse_x_const = find.mle(geosse_x_const, start_geosse)
 mle_geosse_sx_const = find.mle(geosse_sx_const, start_geosse)
