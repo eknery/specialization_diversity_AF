@@ -21,65 +21,63 @@ se_trait = sd(trait_values)/length(trait_values)
 
 ############################### fitting models across trees  ##########################
 const_params = c()
-linear_params = c()
-sigm_params = c()
+l_lin_params = c()
+lm_lin_params = c()
 model_fits = list()
 
 ### setting optimization settings
-control = list(method= "fftC", parscale=0.1, reltol=0.001)
-
-### setting linear function
-xr = range(trait_values) + 10*c(-se_trait, se_trait)
-linear.x = make.linear.x(x0=xr[1], x1=xr[2])
+control = list(parscale=0.1, reltol=0.001)
 
 for (i in 1:length(phylo_trees)){
   ### pick a phylogenetic tree
-  i = 1
+  i = 2
   one_tree = phylo_trees[[i]] 
-  ### starting parameter values
-  start_values = starting.point.quasse(one_tree, states=trait_values)
+  ### starting parameter values and linear function
+  start_quasse = starting.point.quasse(one_tree, states=trait_values)
+  xr = c(range(trait_values) + c(-20,20)*start_quasse["diffusion"])
+  linear.x = make.linear.x(x0=xr[1], x1=xr[2])
   ### setting quasse functions
   # constant
   const =  make.quasse(one_tree, states=trait_values, states.sd=se_trait , lambda=constant.x, mu=constant.x, sampling.f=0.9)
-  #const = constrain(const, drift ~ 0)
-  # linear
-  linear = make.quasse(one_tree,  states=trait_values, states.sd=se_trait , lambda=linear.x, mu=constant.x, sampling.f=0.9)
-  #linear = constrain(linear, drift ~ 0)
-  # sigmoid
-  sigm = make.quasse(one_tree, states=trait_values, states.sd=se_trait , lambda=sigmoid.x, mu=constant.x, sampling.f=0.9)
-  #sigm = constrain(sigm, drift ~ 0)
+  # linear lambda
+  l_lin = make.quasse(one_tree,  states=trait_values, states.sd=se_trait , lambda=linear.x, mu=constant.x, sampling.f=0.9)
+  # linear lambda and mu
+  lm_lin = make.quasse(one_tree, states=trait_values, states.sd=se_trait , lambda=linear.x, mu=linear.x, sampling.f=0.9)
   ### optimization
   ## constant
   # initial values
-  init_const = c(start_values[1], start_values[2], 0.01, start_values[3])
+  init_const = c(start_quasse[1], start_quasse[2], 0.01, start_quasse[3])
   lower_const = c(0,0,0,0)
   names(lower_const) = names(init_const) = argnames(const)
   # finding constant mle
   mle_const = find.mle(const, x.init=init_const, lower=lower_const, control=control)
   const_params = rbind(const_params, mle_const$par)
-  ## linear 
+  ## linear lambda 
   # initial values
-  init_linear = c(mle_const$par[1], lm=0.01, mle_const$par[2], mle_const$par[3:4])
-  names(init_linear) = argnames(linear)
-  # finding linear mle
-  mle_linear = find.mle(linear, x.init=init_linear, control=control)
-  linear_params = rbind(linear_params, mle_linear$par)
-  ## sigmoid 
-  # initial values
-  init_sigm = c(mle_const$par[1], mle_const$par[1], l.xmid=mean(xr), lr=1, mle_const$par[3:4])
-  names(init_sigm) = argnames(sigm)
-  # finding sigmoid mle
-  mle_sigm = find.mle(sigm, x.init=init_sigm, control=control)
-  sigm_params= rbind(sigm_params, mle_sigm$par)
+  init_l_lin = c(mle_const$par[1], 0.01, mle_const$par[2], mle_const$par[3:4])
+  names(init_l_lin) = argnames(l_lin)
+  # finding mle =
+  mle_l_lin = find.mle(l_lin, x.init=init_l_lin, control=control)
+  l_lin_params = rbind(l_lin_params, mle_l_lin$par)
+  ## linear lambda and mu
+  init_lm_lin = c(mle_const$par[1], 0.01, mle_const$par[2], 0.01*mle_const$par[2], mle_const$par[3:4])
+  names(init_lm_lin) = argnames(lm_lin)
+  # finding mle linearlambda and mu
+  mle_lm_lin = find.mle(lm_lin, x.init=init_lm_lin, control=control)
+  lm_lin_params= rbind(lm_lin_params, mle_lm_lin$par)
   ### summarizing model fit
   const_fit = c(lnlik= mle_const$lnLik, n_par=length(mle_const$par))
-  linear_fit = c(mle_linear$lnLik, length(mle_linear$par))
-  sigm_fit = c(mle_sigm$lnLik, length(mle_sigm$par))
-  fit_values = rbind(const_fit, linear_fit, sigm_fit)
+  l_lin_fit = c(mle_l_lin$lnLik, length(mle_l_lin$par))
+  lm_lin_fit = c(mle_lm_lin$lnLik, length(mle_lm_lin$par))
+  fit_values = rbind(const_fit, l_lin_fit, lm_lin_fit)
   model_fits[[i]] = fit_values
   ### update!
   print(paste("Time:", Sys.time(), "Loop iterarion:", as.character(i) ) )
 }
+
+# Df   lnLik    AIC  ChiSq Pr(>|Chi|)   
+# minimal  3 -341.72 689.44                     
+# model 1  5 -335.85 681.70 11.734   0.002831 **
 
 ### arranging into dara frame
 model_fits_df = data.frame()
@@ -95,20 +93,41 @@ aicc = aic -2*(model_fits_df$n_par+1)/(66-model_fits_df$n_par-1)
 model_fits_df = data.frame(model_fits_df, aic, aicc)
 
 ### exporting
-write.table(model_fits_df, "quasse/model_fits_df.csv", sep=",", quote=F, row.names = T)
+write.table(model_fits_df, "quasse/quasse_model_fits_df.csv", sep=",", quote=F, row.names = T)
 write.table(const_params, "quasse/const_params.csv", sep=",", quote=F, row.names = F)
 write.table(linear_params, "quasse/linear_params.csv", sep=",", quote=F, row.names = F)
 write.table(sigm_params, "quasse/sigm_params.csv", sep=",", quote=F, row.names = F)
 
 ########################### choosing the best ###########################
 
-model_fits_df= read.table("4_quasse/model_fits_df.csv", sep=",", h = T)
+model_fits_df= read.table("quasse/quasse_model_fits_df.csv", sep=",", h = T)
 
-final_set= nrow(model_fits_df)-2
 best_fit_per_tree =c()
-for (i in seq(from=1, to=final_set, by=3)){
-  one_tree = model_fits_df[i:(i+2),]
-  best_fit_per_tree = rbind(best_fit_per_tree, one_tree[one_tree$aicc==min(one_tree$aicc),] )
+index = seq(1, 298, by =3)
+for (i in index){
+  one_set = model_fits_df[i:(i+2),]
+  first_lowest = one_set[one_set$aicc==min(one_set$aicc),]
+  minus_first = one_set[-which(one_set$aicc==min(one_set$aicc) ),]
+  second_lowest = minus_first[minus_first$aicc==min(minus_first$aicc),]
+  if (second_lowest$aicc - first_lowest$aicc < 2){
+    best_fit_per_tree = rbind(best_fit_per_tree, second_lowest)
+  } else {
+    best_fit_per_tree = rbind(best_fit_per_tree, first_lowest)
+  }
 }
+
+model_name = c()
+for(i in 1:nrow(best_fit_per_tree)){
+  str_names = strsplit(rownames(best_fit_per_tree), '_')
+  model_name = c(model_name, str_names[[i]][1])
+}
+
+best_fit_models = data.frame(model_name, best_fit_per_tree)
+
+### exporting
+write.table(best_fit_models, "quasse/quasse_best_fit_models.csv", sep=",", quote=F, row.names = F)
+
+table(best_fit_models$model_name)
+
 
  
