@@ -34,35 +34,36 @@ for (i in 1:length(phylo_trees)){
   one_tree = phylo_trees[[i]] 
   ### starting parameter values and linear function
   start_quasse = starting.point.quasse(one_tree, states=trait_values)
-  xr = c(range(trait_values) + c(-20,20)*start_quasse["diffusion"])
+  xr = c(range(trait_values) + c(-1,1)*start_quasse["diffusion"])
   linear.x = make.linear.x(x0=xr[1], x1=xr[2])
   ### setting quasse functions
   # constant
-  const =  make.quasse(one_tree, states=trait_values, states.sd=se_trait , lambda=constant.x, mu=constant.x, sampling.f=0.9)
+  const =  constrain(make.quasse(one_tree, states=trait_values, states.sd=se_trait , lambda=constant.x, mu=constant.x, sampling.f=0.9), drift~0)
   # linear lambda
-  l_lin = make.quasse(one_tree,  states=trait_values, states.sd=se_trait , lambda=linear.x, mu=constant.x, sampling.f=0.9)
+  l_lin = constrain(make.quasse(one_tree,  states=trait_values, states.sd=se_trait , lambda=linear.x, mu=constant.x, sampling.f=0.9), drift~0)
   # linear lambda and mu
-  lm_lin = make.quasse(one_tree, states=trait_values, states.sd=se_trait , lambda=linear.x, mu=linear.x, sampling.f=0.9)
+  lm_lin = constrain(make.quasse(one_tree, states=trait_values, states.sd=se_trait , lambda=linear.x, mu=linear.x, sampling.f=0.9), drift~0)
   ### optimization
   ## constant
   # initial values
-  init_const = c(start_quasse[1], start_quasse[2], 0.01, start_quasse[3])
-  lower_const = c(0,0,0,0)
+  init_const = c(start_quasse[1], start_quasse[2], start_quasse[3])
+  lower_const = c(0,0,0)
   names(lower_const) = names(init_const) = argnames(const)
   # finding constant mle
   mle_const = find.mle(const, x.init=init_const, lower=lower_const, control=control)
   const_params = rbind(const_params, mle_const$par)
   ## linear lambda 
   # initial values
-  init_l_lin = c(mle_const$par[1], 0.01, mle_const$par[2], mle_const$par[3:4])
+  init_l_lin = c(mle_const$par[1], 0.01, mle_const$par[2], mle_const$par[3])
   names(init_l_lin) = argnames(l_lin)
-  # finding mle =
+  # finding mle 
   mle_l_lin = find.mle(l_lin, x.init=init_l_lin, control=control)
   l_lin_params = rbind(l_lin_params, mle_l_lin$par)
   ## linear lambda and mu
-  init_lm_lin = c(mle_const$par[1], 0.01, mle_const$par[2], 0.01*mle_const$par[2], mle_const$par[3:4])
+  #initial values
+  init_lm_lin = c(mle_const$par[1], 0.01, mle_const$par[2], 0.01*mle_const$par[2], mle_const$par[3])
   names(init_lm_lin) = argnames(lm_lin)
-  # finding mle linearlambda and mu
+  # finding mle
   mle_lm_lin = find.mle(lm_lin, x.init=init_lm_lin, control=control)
   lm_lin_params= rbind(lm_lin_params, mle_lm_lin$par)
   ### summarizing model fit

@@ -102,6 +102,6 @@ for(i in 1:nrow(best_fit_per_tree)){
 best_fit_models = data.frame(model_name, best_fit_per_tree)
 
 ### exporting
-write.table(best_fit_models, "geosse/best_fit_models.csv", sep=",", quote=F, row.names = F)
+write.table(best_fit_models, "geosse/geosse_best_fit_models.csv", sep=",", quote=F, row.names = F)
 
 table(best_fit_models$model_name)
