@@ -30,7 +30,6 @@ control = list(parscale=0.1, reltol=0.001)
 
 for (i in 1:length(phylo_trees)){
   ### pick a phylogenetic tree
-  i = 2
   one_tree = phylo_trees[[i]] 
   ### starting parameter values and linear function
   start_quasse = starting.point.quasse(one_tree, states=trait_values)
@@ -76,10 +75,6 @@ for (i in 1:length(phylo_trees)){
   print(paste("Time:", Sys.time(), "Loop iterarion:", as.character(i) ) )
 }
 
-# Df   lnLik    AIC  ChiSq Pr(>|Chi|)   
-# minimal  3 -341.72 689.44                     
-# model 1  5 -335.85 681.70 11.734   0.002831 **
-
 ### arranging into dara frame
 model_fits_df = data.frame()
 for (i in 1:length(model_fits)){
@@ -88,7 +83,7 @@ for (i in 1:length(model_fits)){
 
 ### AIC = -2(log-likelihood) + 2K
 aic = -2*model_fits_df$lnlik +2*(model_fits_df$n_par)
-### AiC = AIC - 2k(k+1) / (n-k-1)
+### AiCc = AIC - 2k(k+1) / (n-k-1)
 aicc = aic -2*(model_fits_df$n_par+1)/(66-model_fits_df$n_par-1)
 ### adding
 model_fits_df = data.frame(model_fits_df, aic, aicc)
@@ -96,8 +91,8 @@ model_fits_df = data.frame(model_fits_df, aic, aicc)
 ### exporting
 write.table(model_fits_df, "quasse/quasse_model_fits_df.csv", sep=",", quote=F, row.names = T)
 write.table(const_params, "quasse/const_params.csv", sep=",", quote=F, row.names = F)
-write.table(linear_params, "quasse/linear_params.csv", sep=",", quote=F, row.names = F)
-write.table(sigm_params, "quasse/sigm_params.csv", sep=",", quote=F, row.names = F)
+write.table(l_lin_params, "quasse/l_lin_params.csv", sep=",", quote=F, row.names = F)
+write.table(lm_lin_params, "quasse/lm_lin_params.csv", sep=",", quote=F, row.names = F)
 
 ########################### choosing the best ###########################
 
@@ -124,11 +119,12 @@ for(i in 1:nrow(best_fit_per_tree)){
 }
 
 best_fit_models = data.frame(model_name, best_fit_per_tree)
+table(best_fit_models$model_name)
 
 ### exporting
 write.table(best_fit_models, "quasse/quasse_best_fit_models.csv", sep=",", quote=F, row.names = F)
 
-table(best_fit_models$model_name)
+
 
 
  
