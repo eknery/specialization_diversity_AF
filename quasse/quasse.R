@@ -23,7 +23,7 @@ se_trait = sd(trait_values)/length(trait_values)
 const_params = c()
 l_lin_params = c()
 lm_lin_params = c()
-model_fits = list()
+model_fit_list = list()
 
 ### setting optimization settings
 control = list(parscale=0.1, reltol=0.001)
@@ -70,38 +70,38 @@ for (i in 1:length(phylo_trees)){
   l_lin_fit = c(mle_l_lin$lnLik, length(mle_l_lin$par))
   lm_lin_fit = c(mle_lm_lin$lnLik, length(mle_lm_lin$par))
   fit_values = rbind(const_fit, l_lin_fit, lm_lin_fit)
-  model_fits[[i]] = fit_values
+  model_fit_list[[i]] = fit_values
   ### update!
   print(paste("Time:", Sys.time(), "Loop iterarion:", as.character(i) ) )
 }
 
 ### arranging into dara frame
-model_fits_df = data.frame()
+model_fit_df = data.frame()
 for (i in 1:length(model_fits)){
-  model_fits_df = rbind(model_fits_df, model_fits[[i]])
+  model_fit_df = rbind(model_fit_df, model_fit_list[[i]])
 }
 
 ### AIC = -2(log-likelihood) + 2K
-aic = -2*model_fits_df$lnlik +2*(model_fits_df$n_par)
+aic = -2*model_fit_df$lnlik +2*(model_fit_df$n_par)
 ### AiCc = AIC - 2k(k+1) / (n-k-1)
-aicc = aic -2*(model_fits_df$n_par+1)/(66-model_fits_df$n_par-1)
+aicc = aic -2*(model_fit_df$n_par+1)/(66-model_fit_df$n_par-1)
 ### adding
-model_fits_df = data.frame(model_fits_df, aic, aicc)
+model_fit_df = data.frame(model_fit_df, aic, aicc)
 
 ### exporting
-write.table(model_fits_df, "quasse/quasse_model_fits_df.csv", sep=",", quote=F, row.names = T)
+write.table(model_fit_df, "quasse/quasse_model_fit_df.csv", sep=",", quote=F, row.names = T)
 write.table(const_params, "quasse/const_params.csv", sep=",", quote=F, row.names = F)
 write.table(l_lin_params, "quasse/l_lin_params.csv", sep=",", quote=F, row.names = F)
 write.table(lm_lin_params, "quasse/lm_lin_params.csv", sep=",", quote=F, row.names = F)
 
 ########################### choosing the best ###########################
 
-model_fits_df= read.table("quasse/quasse_model_fits_df.csv", sep=",", h = T)
+model_fit_df= read.table("quasse/quasse_model_fit_df.csv", sep=",", h = T)
 
 best_fit_per_tree =c()
 index = seq(1, 298, by =3)
 for (i in index){
-  one_set = model_fits_df[i:(i+2),]
+  one_set = model_fit_df[i:(i+2),]
   first_lowest = one_set[one_set$aicc==min(one_set$aicc),]
   minus_first = one_set[-which(one_set$aicc==min(one_set$aicc) ),]
   second_lowest = minus_first[minus_first$aicc==min(minus_first$aicc),]
