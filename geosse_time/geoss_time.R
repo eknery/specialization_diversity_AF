@@ -35,11 +35,11 @@ for (i in 1:length(phylo_trees)){
   ### pick a phylogenetic tree
   one_tree = phylo_trees[[i]] 
   ### set models
-  sxd_sx_lin = make.geosse.t(mcc, states=geo_states, functions=t_functions, sampling.f=0.9)
+  sxd_sx_lin = make.geosse.t(one_tree, states=geo_states, functions=t_functions, sampling.f=0.9)
   sd_s_lin = constrain(sxd_sx_lin, xA.c ~ xB.c, xA.m ~ xB.m)
   d_lin = constrain(sd_s_lin , sA.c ~ sB.c, sA.m ~ sB.m)
   ### starting values = sA.c, sA.m, sB.c, sB.m, sAB.c, sAB.m, xA, xB, dA, dB
-  p = starting.point.geosse(mcc)
+  p = starting.point.geosse(one_tree)
   start_geosse_t = c(p[1], p[1], p[2], p[2], p[3], p[3], p[4], p[4], p[5], p[5], p[6], p[7])
   names(start_geosse_t) = argnames(sxd_sd_lin)
   ### find mle
