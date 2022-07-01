@@ -10,9 +10,6 @@ library(ape)
 #loading spp coordinates
 spp_points=read.table("0_data/spp_points_7km.csv", header =T, sep=",",  na.strings = "NA", fill=T)
 
-# loading geographic distribution
-spp_geographic_distribution = read.table("0_data/spp_geographic_distribution.csv", sep=',', h=T)
-
 ### loading scale niche positions
 hv_scale_positions = read.table("1_hypervolume_inference/hv_scale_positions.csv", sep=",", h=T)
 
@@ -131,8 +128,8 @@ for (sp_name in all_spp_names){
 min_hv = apply(sister_hv_comparison[,1:2], MARGIN = 1, FUN= min)
 
 # dataframe
-sister_hv_comparison = data.frame(spp_geographic_distribution$state, all_spp_names, sister_hv_comparison, min_hv, sister_divergence_time$sister_divergence)
-colnames(sister_hv_comparison) =c("state", "species", "sp_hvolume", "sister_hvolume", "intersection", "union", "minimal_hvolume", "divergence_time")
+sister_hv_comparison = data.frame(all_spp_names, sister_hv_comparison, min_hv, sister_divergence_time$sister_divergence)
+colnames(sister_hv_comparison) =c("species", "sp_hvolume", "sister_hvolume", "intersection", "union", "minimal_hvolume", "divergence_time")
 
 # exporting
 write.table(sister_hv_comparison, "2_sister_hypervolume/sister_hv_comparison.csv", sep=",", quote=F, row.names = F)
@@ -154,8 +151,8 @@ for (i in 1:length(all_spp_names)){
   distance_to_sister[i] = sqrt(sum((sp_positions - sister_positions)^2))
 }
 
-sister_hv_distance = data.frame(spp_geographic_distribution$state, all_spp_names, distance_to_sister, sister_divergence_time$sister_divergence)
-colnames(sister_hv_distance) = c("state", "species", "distance_to_sister", "divergence_time")
+sister_hv_distance = data.frame(all_spp_names, distance_to_sister, sister_divergence_time$sister_divergence)
+colnames(sister_hv_distance) = c("species", "distance_to_sister", "divergence_time")
 
 #exporting
 write.table(sister_hv_distance, "2_sister_hypervolume/sister_hv_distance.csv", sep=',', quote=F, row.names=T)

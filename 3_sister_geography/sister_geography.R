@@ -11,9 +11,6 @@ library(ape)
 #loading spp coordinates
 spp_points=read.table("0_data/spp_points_7km.csv", header =T, sep=",",  na.strings = "NA", fill=T)
 
-# loading geographic distribution
-spp_geographic_distribution = read.table("0_data/spp_geographic_distribution.csv", sep=',', h=T)
-
 # loading phylogenetic tree
 mcc=read.tree("0_data/mcc_phylo.nwk")
 
@@ -73,8 +70,8 @@ for (i in 1:length(all_spp_names)){
 min_area = apply(sister_area_comparison[,1:2], MARGIN = 1, FUN= min)
 
 # dataframe
-sister_area_comparison = data.frame(spp_geographic_distribution$state, all_spp_names, sister_area_comparison, min_area, sister_divergence_time$sister_divergence)
-colnames(sister_area_comparison) =c("state", "species", "sp_area", "sister_area", "intersection", "union", "minimal_area","divergence_time")
+sister_area_comparison = data.frame(all_spp_names, sister_area_comparison, min_area, sister_divergence_time$sister_divergence)
+colnames(sister_area_comparison) =c("species", "sp_area", "sister_area", "intersection", "union", "minimal_area","divergence_time")
 
 #exporting
 write.table(sister_area_comparison, "3_sister_geography/sister_area_comparison.csv", sep=',', quote=F, row.names=T)
@@ -96,8 +93,8 @@ for (i in 1:length(all_spp_names)){
 }
 
 # dataframe
-sister_geo_distance = data.frame(spp_geographic_distribution$state, all_spp_names, sister_geo_distance, sister_divergence_time$sister_divergence)
-colnames(sister_geo_distance) = c("state", "species", "distance_to_sister", "divergence_time")
+sister_geo_distance = data.frame(all_spp_names, sister_geo_distance, sister_divergence_time$sister_divergence)
+colnames(sister_geo_distance) = c("species", "distance_to_sister", "divergence_time")
 
 #exporting
 write.table(sister_geo_distance, "3_sister_geography/sister_geo_distance.csv", sep=',', quote=F, row.names=T)

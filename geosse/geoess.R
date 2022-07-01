@@ -12,7 +12,7 @@ phylo_trees = read.tree("0_data/100_rand_phylos.nwk")
 spp_count_domain = read.table("0_data/spp_count_domain.csv", h=T, sep=",")
 
 ### define states threshold
-high_ths = 0.75
+high_ths = 0.90
 low_ths = (1 - high_ths)
 geo_states = af_percentage = spp_count_domain$AF/ apply(spp_count_domain[,-1], MARGIN = 1, FUN=sum)
 geo_states[af_percentage >= high_ths] = "2"
@@ -71,9 +71,9 @@ model_fits_df = data.frame(model_fits_df, aic, aicc)
 
 ### exporting
 write.table(model_fits_df, "geosse/geosse_model_fits_df.csv", sep=",", quote=F, row.names = T)
-write.table(const_params, "geosse/d_params.csv", sep=",", quote=F, row.names = F)
-write.table(linear_params, "geosse/sd_params.csv", sep=",", quote=F, row.names = F)
-write.table(sigm_params, "geosse/sxd_params.csv", sep=",", quote=F, row.names = F)
+write.table(d_params, "geosse/d_params.csv", sep=",", quote=F, row.names = F)
+write.table(sd_params, "geosse/sd_params.csv", sep=",", quote=F, row.names = F)
+write.table(sxd_params, "geosse/sxd_params.csv", sep=",", quote=F, row.names = F)
 
 ########################### choosing the best ###########################
 
@@ -100,8 +100,9 @@ for(i in 1:nrow(best_fit_per_tree)){
 }
 
 best_fit_models = data.frame(model_name, best_fit_per_tree)
+table(best_fit_models$model_name)
 
 ### exporting
 write.table(best_fit_models, "geosse/geosse_best_fit_models.csv", sep=",", quote=F, row.names = F)
 
-table(best_fit_models$model_name)
+
