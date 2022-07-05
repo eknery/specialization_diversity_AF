@@ -105,8 +105,82 @@ for(i in 1:nrow(best_fit_per_tree)){
 }
 
 best_fit_models = data.frame(model_name, best_fit_per_tree)
-table(best_fit_models$model_name)
 
 ### exporting
 write.table(best_fit_models, "geosse_time/geosse_time_best_fit_models.csv", sep=",", quote=F, row.names = F)
+
+#################### summarizing best model estimates #########################
+best_geosse_time = read.table("geosse_time/geosse_time_best_fit_models.csv", sep=",", h = T)
+
+d_lin_params = read.table("geosse_time/d_lin_params.csv", sep=",",  h = T)
+sd_s_lin_params = read.table("geosse_time/sd_s_lin_params.csv", sep=",",  h = T)
+sxd_sx_lin_params = read.table("geosse_time/sxd_sx_lin_params.csv", sep=",", h = T)
+
+### most common model
+most_repeated = max(table(best_geosse_time$model_name))
+common_model = names(which(table(best_geosse_time$model_name) == most_repeated) ) 
+common_scenario = which(best_geosse_time$model_name == common_model)
+common_params = sd_s_lin_params[common_scenario,]
+
+### descriptive statistics
+apply(common_params, MARGIN = 2, FUN=median)
+apply(common_params, MARGIN = 2, FUN=IQR)
+
+### plotting
+library(tidyverse)
+library(PupillometryR)
+library(ggpubr)
+library(readr)
+library(tidyr)
+library(ggplot2)
+library(Hmisc)
+library(plyr)
+library(RColorBrewer)
+library(reshape2)
+
+### common values
+x1 = rep(0, nrow(common_params))
+xend = rep(8.5, nrow(common_params))
+y_lim=c(0,4.5)
+
+# axis names
+x_axis_name = "divergence time\n(million years)"
+y_axis_name = "lambda"
+
+### sA line estimates
+intercepts_a = common_params$sA.c 
+angulars_a = common_params$sA.m
+lines_a = data.frame(x1, xend, y1= intercepts_a, yend= xend*angulars_a + intercepts_a)
+
+sa = ggplot() +
+  geom_segment(data = lines_a, color="#D81B60", size=1.2, alpha=0.1,  aes(x = x1, y = y1, xend = xend, yend = yend), inherit.aes = FALSE)+
+  ylim(y_lim)+
+  xlab(x_axis_name) + ylab("")+
+  theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=9,face="bold"),axis.text=element_text(size=6),legend.position = "none")
+
+### sB line estimates
+intercepts_b = common_params$sB.c 
+angulars_b = common_params$sB.m
+lines_b = data.frame(x1, xend, y1= intercepts_b, yend = xend*angulars_b + intercepts_b)
+
+sb = ggplot() +
+  geom_segment(data = lines_b, color="#1E88E5", size=1.2, alpha=0.1,  aes(x = x1, y = y1, xend = xend, yend = yend), inherit.aes = FALSE)+
+  ylim(y_lim)+
+  xlab(x_axis_name)+ ylab(y_axis_name)+
+  theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=9,face="bold"),axis.text=element_text(size=6),legend.position = "none")
+
+### sAB line estimates
+intercepts_ab = common_params$sAB.c 
+angulars_ab = common_params$sAB.m
+lines_ab = data.frame(x1, xend, y1= intercepts_ab, yend = xend*angulars_ab + intercepts_ab)
+
+sab = ggplot() +
+  geom_segment(data = lines_ab, color="#FFC107", size=1.2, alpha=0.1,  aes(x = x1, y = y1, xend = xend, yend = yend), inherit.aes = FALSE)+
+  ylim(y_lim)+
+  xlab(x_axis_name)+ ylab("")+
+  theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=9,face="bold"),axis.text=element_text(size=6),legend.position = "none")
+
+tiff("geosse_time/geosse_time_lambda.tiff", units="in", width=4.5, height=1.75, res=600)
+  ggarrange(sb,sab, sa, nrow=1,ncol=3)
+dev.off()
 

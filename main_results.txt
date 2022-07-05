@@ -1,0 +1,14 @@
+
+### geosse_time
+> table(best_geosse_time$model_name)
+  d  sd sxd 
+ 17  82   1 
+
+### geosse_time: most common = sd_s_lin
+> apply(common_params, MARGIN = 2, FUN=median)
+         sA.c          sA.m          sB.c          sB.m         sAB.c         sAB.m          xB.c          xB.m            dA            dB 
+ 1.027745e-01  6.097715e-02  1.241520e-01  2.187945e-01  2.184113e-06 -1.561381e-08  5.669683e-04 -5.639040e-05  9.414211e-02  1.717605e-01 
+> apply(common_params, MARGIN = 2, FUN=IQR)
+        sA.c         sA.m         sB.c         sB.m        sAB.c        sAB.m         xB.c         xB.m           dA           dB 
+4.436836e-02 2.849017e-02 6.346478e-02 1.161001e-01 2.745222e-05 4.258974e-06 3.764400e-02 5.054244e-03 1.795501e-02 5.106429e-02 
+ 
