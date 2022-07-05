@@ -110,23 +110,23 @@ best_fit_models = data.frame(model_name, best_fit_per_tree)
 write.table(best_fit_models, "geosse_time/geosse_time_best_fit_models.csv", sep=",", quote=F, row.names = F)
 
 #################### summarizing best model estimates #########################
-best_geosse_time = read.table("geosse_time/geosse_time_best_fit_models.csv", sep=",", h = T)
+best_fit_models = read.table("geosse_time/geosse_time_best_fit_models.csv", sep=",", h = T)
 
 d_lin_params = read.table("geosse_time/d_lin_params.csv", sep=",",  h = T)
 sd_s_lin_params = read.table("geosse_time/sd_s_lin_params.csv", sep=",",  h = T)
 sxd_sx_lin_params = read.table("geosse_time/sxd_sx_lin_params.csv", sep=",", h = T)
 
 ### most common model
-most_repeated = max(table(best_geosse_time$model_name))
-common_model = names(which(table(best_geosse_time$model_name) == most_repeated) ) 
-common_scenario = which(best_geosse_time$model_name == common_model)
+most_repeated = max(table(best_fit_models$model_name))
+common_model = names(which(table(best_fit_models$model_name) == most_repeated) ) 
+common_scenario = which(best_fit_models$model_name == common_model)
 common_params = sd_s_lin_params[common_scenario,]
 
 ### descriptive statistics
 apply(common_params, MARGIN = 2, FUN=median)
 apply(common_params, MARGIN = 2, FUN=IQR)
 
-### plotting
+############################### plotting ###################################
 library(tidyverse)
 library(PupillometryR)
 library(ggpubr)

@@ -53,10 +53,10 @@ ggplot(data= sister_geo_distance, aes(x=divergence_time, y=distance_to_sister, f
 
 
 ### sympatry ~ hvolume
-df = data.frame(sister_geo_distance, sister_hv_comparison$sp_hvolume)
-colnames(df)[5] = "sp_hvolume"
+spp_geo_hv = data.frame(sister_geo_distance, sister_hv_comparison$sp_hvolume)
+colnames(spp_geo_hv )[5] = "sp_hvolume"
 
-ggplot(data= df, aes(x=sp_hvolume, y=log(distance_to_sister) ) ) +
+ggplot(data= spp_geo_hv , aes(x=sp_hvolume, y=log(distance_to_sister) ) ) +
   geom_smooth(method= lm, formula= y~x )+
   geom_point(aes(color=state), position = position_jitter(width = 0.07), size = 2) +
   theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=14,face="bold"),axis.text.x=element_text(size=10))

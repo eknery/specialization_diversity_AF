@@ -4,7 +4,7 @@
   d  sd sxd 
  17  82   1 
 
-### geosse_time: most common = sd_s_lin
+# geosse_time: most common = sd_s_lin
 > apply(common_params, MARGIN = 2, FUN=median)
          sA.c          sA.m          sB.c          sB.m         sAB.c         sAB.m          xB.c          xB.m            dA            dB 
  1.027745e-01  6.097715e-02  1.241520e-01  2.187945e-01  2.184113e-06 -1.561381e-08  5.669683e-04 -5.639040e-05  9.414211e-02  1.717605e-01 
@@ -12,3 +12,15 @@
         sA.c         sA.m         sB.c         sB.m        sAB.c        sAB.m         xB.c         xB.m           dA           dB 
 4.436836e-02 2.849017e-02 6.346478e-02 1.161001e-01 2.745222e-05 4.258974e-06 3.764400e-02 5.054244e-03 1.795501e-02 5.106429e-02 
  
+### quasse
+> table(best_fit_models$model_name)
+ lm 
+100  
+
+# quasse: most common = lm
+> apply(common_params, MARGIN = 2, FUN=median)
+          l.c           l.m           m.c           m.m     diffusion 
+   0.45958301   -0.01941062 -720.04326013 -251.03218423   10.37314582 
+> apply(common_params, MARGIN = 2, FUN=IQR)
+         l.c          l.m          m.c          m.m    diffusion 
+1.533446e-01 3.745334e-02 3.484729e+03 6.359193e+02 5.685264e+00

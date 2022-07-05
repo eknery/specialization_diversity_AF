@@ -13,4 +13,3 @@ for (i in 1:100){
   best_scenario = c( best_scenario, names(which(aicc_values == min_aicc)) )
 }
 
-best_scenario

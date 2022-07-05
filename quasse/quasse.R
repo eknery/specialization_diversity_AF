@@ -124,7 +124,80 @@ table(best_fit_models$model_name)
 ### exporting
 write.table(best_fit_models, "quasse/quasse_best_fit_models.csv", sep=",", quote=F, row.names = F)
 
+#################### summarizing best model estimates #########################
+best_fit_models = read.table("quasse/quasse_best_fit_models.csv", sep=",", h = T)
+
+const_params = read.table("quasse/const_params.csv", sep=",",  h = T)
+l_lin_params = read.table("quasse/l_lin_params.csv", sep=",",  h = T)
+lm_lin_params = read.table("quasse/lm_lin_params.csv", sep=",", h = T)
 
 
+lm_lin_params
+
+### most common model
+most_repeated = max(table(best_fit_models$model_name))
+common_model = names(which(table(best_fit_models$model_name) == most_repeated) ) 
+common_scenario = which(best_fit_models$model_name == common_model)
+common_params = lm_lin_params[common_scenario,]
+
+### descriptive statistics
+apply(common_params, MARGIN = 2, FUN=median)
+apply(common_params, MARGIN = 2, FUN=IQR)
+
+################################## plotting #############################
+library(tidyverse)
+library(PupillometryR)
+library(ggpubr)
+library(readr)
+library(tidyr)
+library(ggplot2)
+library(Hmisc)
+library(plyr)
+library(RColorBrewer)
+library(reshape2)
+
+### loading occurrence count per domain
+spp_count_domain = read.table("0_data/spp_count_domain.csv", h=T, sep=",")
+
+### define geographic states 
+high_ths = 0.9
+low_ths = (1 - high_ths)
+geo_states = af_percentage = spp_count_domain$AF/ apply(spp_count_domain[,-1], MARGIN = 1, FUN=sum)
+geo_states[af_percentage >= high_ths] = "AF"
+geo_states[af_percentage <= low_ths] = "other"
+geo_states[af_percentage > low_ths & af_percentage < high_ths] = "AFother"
+names(geo_states) = spp_count_domain$species
+
+### summary hypervolume per geographic state
+aggregate(hvolumes, by=list(geo_states), mean)
+
+### common values
+x1 = rep(0, nrow(common_params))
+xend = rep(max(hvolumes), nrow(common_params))
+y_lim=c(0,1)
+
+# axis names
+x_axis_name = "hypervolume size"
+y_axis_name = "lambda"
+
+### line estimates
+intercepts = common_params$l.c 
+angulars = common_params$l.m
+lines = data.frame(x1, xend, y1= intercepts, yend= xend*angulars + intercepts)
+
+median_intercept = median(intercepts)
+median_angular = median(angulars)
+median_line = data.frame(x1, xend, y1= median_intercept, yend= xend*median_angular + median_intercept)
+
+lm_lambda = ggplot() +
+  geom_segment(data = lines, color="gray", size=1.2, alpha=0.1,  aes(x = x1, y = y1, xend = xend, yend = yend), inherit.aes = FALSE)+
+  geom_segment(data = median_line, color="black", size=1, alpha=0.5,  aes(x = x1, y = y1, xend = xend, yend = yend))+
+  ylim(y_lim)+
+  xlab(x_axis_name) + ylab(y_axis_name)+
+  theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=9,face="bold"),axis.text=element_text(size=6),legend.position = "none")
+
+tiff("quasse/quasse_lambda.tiff", units="in", width=2, height=1.75, res=600)
+  lm_lambda
+dev.off()
 
  
