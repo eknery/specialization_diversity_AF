@@ -167,10 +167,10 @@ for (n in 1:length(phylo_trees) ){
   for (i in 1:length(geo_groups) ){
     group_name = names(geo_groups)[i]
     one_group = geo_groups[[i]]
-    no = one_group$intersection/one_group$minimal_hv
+    no = one_group$intersection/one_group$union
     mean_no = mean(no)
     linear_model = lm(no ~ one_group$divergence_time)
-    intercept_no =linear_model$coefficients["(Intercept)"]
+    intercept_no = linear_model$coefficients["(Intercept)"]
     one_group_metric = c(group_name, mean_no, intercept_no)
     sister_no_metrics = rbind(sister_no_metrics, one_group_metric)
   }
