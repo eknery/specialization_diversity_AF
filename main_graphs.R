@@ -1,3 +1,5 @@
+setwd("C:/Users/eduar/Documents/GitHub/specialization_diversity_AF")
+
 library(tidyverse)
 library(PupillometryR)
 library(ggpubr)
@@ -9,9 +11,8 @@ library(plyr)
 library(RColorBrewer)
 library(reshape2)
 
-### loading niche and geographic sister data
-sister_hv_comparison = read.table("2_sister_hypervolume/sister_hv_comparison.csv", sep=",", h = T)
-sister_geo_distance = read.table("3_sister_geography/sister_geo_distance.csv", sep=",", h = T)
+### loading geographic and niche sister data
+sister_ro_metrics = read.table("3_sister_geography/sister_ro_metrics.csv", sep=',', h=T)
 
 ### loading occurrence count per domain
 spp_count_domain = read.table("0_data/spp_count_domain.csv", h=T, sep=",")
@@ -25,31 +26,19 @@ geo_states[af_percentage <= low_ths] = "other"
 geo_states[af_percentage > low_ths & af_percentage < high_ths] = "AFother"
 names(geo_states) = spp_count_domain$species
 
-sister_hv_comparison$state = geo_states
-sister_geo_distance$state = geo_states
+# my colors
+mycols = c( "#1E88E5", "#FFC107", "#D81B60")
 
-### hvolume overlap
-ggplot(data= sister_hv_comparison, aes(x=state, y=intersection/union, fill= state)) +
-  geom_boxplot(alpha=0.5)+
-  geom_point(aes(y=intersection/union, color=state), position = position_jitter(width = 0.07), size = 2) +
-  theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=14,face="bold"),axis.text.x=element_text(size=10))
-
-ggplot(data= sister_hv_comparison, aes(x=divergence_time, y=intersection/union, fill=state)) +
-  geom_smooth(method= lm, formula= y~x, aes(color=state), fill="white")+
-  geom_point(aes(color=state), position = position_jitter(width = 0.07), size = 2) +
-  theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=14,face="bold"),axis.text.x=element_text(size=10))
-
-### geo distance !!!!!
-
-ggplot(data= sister_geo_distance, aes(x=state, y=distance_to_sister, fill= state)) +
-  geom_boxplot(alpha=0.5)+
-  geom_point(aes(y=distance_to_sister, color=state), position = position_jitter(width = 0.07), size = 2) +
-  theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=14,face="bold"),axis.text.x=element_text(size=10))
-
-ggplot(data= sister_geo_distance, aes(x=divergence_time, y=distance_to_sister, fill=state)) +
-  geom_smooth(method= lm, formula= y~x, aes(color=state), fill="white")+
-  geom_point(aes(color=state), position = position_jitter(width = 0.07), size = 2) +
-  theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=14,face="bold"),axis.text.x=element_text(size=10))
+### sister ro metrics
+ggplot(data= sister_ro_metrics, aes(x=state, y=intercept_ro, fill= state)) +
+  geom_point(aes(color=state),position = position_jitter(width = 0.07), size = 2, alpha = 0.25) +
+  geom_boxplot(width = 0.2, outlier.shape = NA, alpha = 0.50)+
+  geom_flat_violin(position = position_nudge(x = 0.12, y = 0), alpha = 0.50) +
+  scale_fill_manual(values=mycols)+
+  scale_colour_manual(values=mycols)+
+  xlab("geographic distribution")+ ylab("RO intercept")+
+  scale_x_discrete(labels=c("AF" = "AF-endemic", "AFother" = "AF and other\ndomains", "other" = "outside AF"))+
+  theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=14,face="bold"),axis.text.x=element_text(size=8),legend.position = "none")
 
 
 ### sympatry ~ hvolume
