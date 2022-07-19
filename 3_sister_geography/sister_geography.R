@@ -18,13 +18,10 @@ phylo_trees = read.tree("0_data/100_rand_phylos.nwk")
 # all species names
 all_spp_names = sort(unique(spp_points$species))
 
-# sourcing other functions
-source("2_sister_hypervolume/function_sister_pairs.R")
-
 ### loading occurrence count per domain
 spp_count_domain = read.table("0_data/spp_count_domain.csv", h=T, sep=",")
 
-### define states threshold
+# define states threshold
 high_ths = 0.90
 low_ths = (1 - high_ths)
 geo_states = af_percentage = spp_count_domain$AF/ apply(spp_count_domain[,-1], MARGIN = 1, FUN=sum)
@@ -32,6 +29,9 @@ geo_states[af_percentage >= high_ths] = "AF"
 geo_states[af_percentage <= low_ths] = "other"
 geo_states[af_percentage > low_ths & af_percentage < high_ths] = "AFother"
 names(geo_states) = spp_count_domain$species
+
+# sourcing other functions
+source("2_sister_hypervolume/function_sister_pairs.R")
 
 ############################ sister area comparisons #######################
 
@@ -108,27 +108,3 @@ sister_ro_metrics$intercept_ro = as.numeric(sister_ro_metrics$intercept_ro)
 
 #exporting
 write.table(sister_ro_metrics, "3_sister_geography/sister_ro_metrics.csv", sep=',', quote=F, row.names=F)
-
-######################## sister geo distance ###############################
-
-sister_geo_distance = c()
-for (i in 1:length(all_spp_names)){
-  # focal species
-  sp_name = all_spp_names[i]
-  sp_points = spp_points[spp_points$species == sp_name, -1]
-  sp_sf = st_as_sf(sp_points, coords=c(1,2))
-  # sister taxa
-  sister_name = sister_taxa_list[[sp_name]]
-  sister_points = spp_points[spp_points$species %in% sister_name,-1]
-  sister_sf = st_as_sf(sister_points, coords=c(1,2))
-  # calculating distance
-  sister_geo_distance[i] = median(st_distance(sp_sf, sister_sf))
-}
-
-# dataframe
-sister_geo_distance = data.frame(all_spp_names, sister_geo_distance, sister_divergence_time$sister_divergence)
-colnames(sister_geo_distance) = c("species", "distance_to_sister", "divergence_time")
-
-#exporting
-write.table(sister_geo_distance, "3_sister_geography/sister_geo_distance.csv", sep=',', quote=F, row.names=T)
-

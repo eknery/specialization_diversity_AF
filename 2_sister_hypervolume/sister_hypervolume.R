@@ -10,11 +10,9 @@ library(ape)
 #loading spp coordinates
 spp_points=read.table("0_data/spp_points_7km.csv", header =T, sep=",",  na.strings = "NA", fill=T)
 
-### loading scale niche positions
-hv_scale_positions = read.table("1_hypervolume_inference/hv_scale_positions.csv", sep=",", h=T)
-
 # loading phylogenetic tree
 mcc=read.tree("0_data/mcc_phylo.nwk")
+phylo_trees = read.tree("0_data/100_rand_phylos.nwk")
 
 # loading raster layers
 ras1 = raster("0_data/rasters/temperature_diurnal_range")
@@ -25,6 +23,18 @@ env_ras= stack(ras1,ras2,ras3,ras4)
 
 # all species names
 all_spp_names = sort(unique(spp_points$species))
+
+### loading occurrence count per domain
+spp_count_domain = read.table("0_data/spp_count_domain.csv", h=T, sep=",")
+
+# define states threshold
+high_ths = 0.90
+low_ths = (1 - high_ths)
+geo_states = af_percentage = spp_count_domain$AF/ apply(spp_count_domain[,-1], MARGIN = 1, FUN=sum)
+geo_states[af_percentage >= high_ths] = "AF"
+geo_states[af_percentage <= low_ths] = "other"
+geo_states[af_percentage > low_ths & af_percentage < high_ths] = "AFother"
+names(geo_states) = spp_count_domain$species
 
 # sourcing other functions
 source("2_sister_hypervolume/function_sister_pairs.R")
@@ -54,7 +64,7 @@ for (i in 1:nlayers(scale_env_ras)) {
 
 ### treating spp occurrences
 # extracting spp z-values
-scale_spp_env = extract(scale_env_ras,spp_points[,2:3])
+scale_spp_env = raster::extract(scale_env_ras,spp_points[,2:3])
 scale_spp_env = data.frame(spp_points$species, scale_spp_env)
 colnames(scale_spp_env)[1] = "species"
 
@@ -65,7 +75,7 @@ for (i in 2:length(scale_spp_env[1,])){
 if (length(spp_nas) > 0){
   scale_spp_env = scale_spp_env[-spp_nas,]}
 
-############################ loading best model threshold ######################
+############################ fitting hypervolumes ######################
 
 # loading threshold values
 mean_hv_performance=read.table("1_hypervolume_inference/mean_hv_performance.csv", header =T, sep=",",  na.strings = "NA", fill=T)
@@ -80,28 +90,8 @@ for(sp_name in all_spp_names){
 }
 names(best_ths) = all_spp_names
 
-############################# sister taxa and divergence time ############################
-
-# phylogenetic distance
-phylo_distance = cophenetic(mcc)
-
-# sister taxa
-sister_taxa_list = sister_pairs(phylo_distance)
-
-### sister divergence time
-sister_divergence = c()
-for(focal_sp in all_spp_names){
-  focal_sp_dists= round(phylo_distance[focal_sp,],5)
-  min_phylo_dist = round( min(phylo_distance[focal_sp,][phylo_distance[focal_sp,] != 0]), 5)
-  sister_divergence = c(sister_divergence, min_phylo_dist)
-}
-
-sister_divergence_time = data.frame(all_spp_names,sister_divergence)
-colnames(sister_divergence_time)[1] = "species"
-
-################################# sister hv comparison ##########################
-
-sister_hv_comparison = matrix(0, nrow=length(all_spp_names), ncol=4)
+# fitting models per species
+all_spp_hv = list()
 for (sp_name in all_spp_names){
   index = which(sp_name == all_spp_names)
   sp_data = scale_spp_env[scale_spp_env$species== sp_name, 2:5]
@@ -110,49 +100,87 @@ for (sp_name in all_spp_names){
   sp_hv = hypervolume_gaussian(sp_data,  samples.per.point = ceiling((10^(3 + sqrt(ncol(sp_data))))/nrow(sp_data)), 
                                kde.bandwidth = sp_band, sd.count = 3, chunk.size = 100,
                                quantile.requested = sp_ths, quantile.requested.type = "probability")
-  sister_hv_comparison[index,1] = sp_hv@Volume
-  sister_data = scale_spp_env[scale_spp_env$species %in% sister_taxa_list[[sp_name]], 2:5]
-  sister_ths = median(best_ths[names(best_ths) %in% sister_taxa_list[[sp_name]]])
-  sister_band = estimate_bandwidth(sister_data)
-  sister_hv = hypervolume_gaussian(sister_data,  samples.per.point = ceiling((10^(3 + sqrt(ncol(sister_data))))/nrow(sister_data)), 
-                               kde.bandwidth = sister_band, sd.count = 3, chunk.size = 100,
-                               quantile.requested = sister_ths, quantile.requested.type = "probability")
-  sister_hv_comparison[index,2] = sister_hv@Volume
-  # getting intersection and union
-  hv_set = hypervolume_set(sp_hv, sister_hv, check.memory = F)
-  sister_hv_comparison[index,3] = hv_set[[3]]@Volume # taking intersection
-  sister_hv_comparison[index,4] = hv_set[[4]]@Volume # taking union
+  all_spp_hv[[index]] = sp_hv
 }
+names(all_spp_hv) = all_spp_names
 
-# minimal hv per sister pair
-min_hv = apply(sister_hv_comparison[,1:2], MARGIN = 1, FUN= min)
+############################# sister hv comparison ############################
 
-# dataframe
-sister_hv_comparison = data.frame(all_spp_names, sister_hv_comparison, min_hv, sister_divergence_time$sister_divergence)
-colnames(sister_hv_comparison) =c("species", "sp_hvolume", "sister_hvolume", "intersection", "union", "minimal_hvolume", "divergence_time")
-
-# exporting
-write.table(sister_hv_comparison, "2_sister_hypervolume/sister_hv_comparison.csv", sep=",", quote=F, row.names = F)
-
-#################################### sister hv position #########################
-
-distance_to_sister = c()
-for (i in 1:length(all_spp_names)){
-  # focal sp position
-  sp_name = all_spp_names[i]
-  sp_positions = hv_scale_positions[hv_scale_positions$species == sp_name,-1]
-  # sister sp position
-  sister_name = sister_taxa_list[[sp_name]]
-  sister_positions = hv_scale_positions[hv_scale_positions$species %in% sister_name,-1]
-    if( nrow(sister_positions) != 1 ){ # take median if more than one sister
-      sister_positions = apply(sister_positions, MARGIN=2, FUN=median)
+for (n in 1:length(phylo_trees)){
+  one_tree = phylo_trees[[n]]
+  # phylogenetic distance
+  phylo_distance = cophenetic(one_tree)
+  # sister taxa
+  sister_taxa_list = sister_pairs(phylo_distance)
+  ### sister divergence time
+  sister_divergence = c()
+  for(focal_sp in all_spp_names){
+    focal_sp_dists= round(phylo_distance[focal_sp,],5)
+    min_phylo_dist = round( min(phylo_distance[focal_sp,][phylo_distance[focal_sp,] != 0]), 5)
+    sister_divergence = c(sister_divergence, min_phylo_dist)
+  }
+  ### sister hv comparison
+  sister_hv_comparison = matrix(0, nrow=length(all_spp_names), ncol=4)
+  for (sp_name in all_spp_names){
+    index = which(sp_name == all_spp_names)
+    # sp hv
+    sp_hv = all_spp_hv[[sp_name]]
+    # sister hv
+    sister_name = sister_taxa_list[[sp_name]]
+    if (length(sister_name) > 1){
+      one_sister_name = sister_name[1]
+      sister_hv = all_spp_hv[[one_sister_name]]
+      for (i in 2:length(sister_name) ){
+        one_sister_name = sister_name[i]
+        one_sister_hv = all_spp_hv[[one_sister_name]]
+        sister_set = hypervolume_set(sister_hv, one_sister_hv, check.memory = F)
+        sister_hv = sister_set[[4]]
+      }
+    } else{
+      sister_hv = all_spp_hv[[sister_name]]
     }
-  # eucledian distance
-  distance_to_sister[i] = sqrt(sum((sp_positions - sister_positions)^2))
+    # getting sp and sister volumes
+    sister_hv_comparison[index,1] = sp_hv@Volume
+    sister_hv_comparison[index,2] = sister_hv@Volume
+    # getting intersection and union volumes 
+    hv_set = hypervolume_set(sp_hv, sister_hv, check.memory = F)
+    sister_hv_comparison[index,3] = hv_set[[3]]@Volume # taking intersection
+    sister_hv_comparison[index,4] = hv_set[[4]]@Volume # taking union
+  }
+  # minimal hypervolume per sister pair
+  min_hv = apply(sister_hv_comparison[,1:2], MARGIN = 1, FUN= min)
+  # dataframe
+  sister_hv_comparison = data.frame(all_spp_names, sister_hv_comparison, min_hv, sister_divergence)
+  colnames(sister_hv_comparison) =c("species", "sp_hv", "sister_hv", "intersection", "union", "minimal_hv","divergence_time")
+  #exporting
+  write.table(sister_hv_comparison, paste("2_sister_hypervolume/sister_hv_comparisons/sister_hv_comparison_", as.character(n), ".csv", sep="" ), sep=',', quote=F, row.names=F)
+  # update me!
+  print(paste("Time:", Sys.time(), "Loop iterarion:", as.character(n) ) )
 }
 
-sister_hv_distance = data.frame(all_spp_names, distance_to_sister, sister_divergence_time$sister_divergence)
-colnames(sister_hv_distance) = c("species", "distance_to_sister", "divergence_time")
+######################## calculating sister NO metrics #########################
+
+sister_no_metrics = c()
+for (n in 1:length(phylo_trees) ){ 
+  sister_hv_comparison = read.table(paste("2_sister_hypervolume/sister_hv_comparisons/sister_hv_comparison_", as.character(n), ".csv", sep=""), sep=',', h=T)
+  geo_groups = split(sister_hv_comparison, geo_states)
+  for (i in 1:length(geo_groups) ){
+    group_name = names(geo_groups)[i]
+    one_group = geo_groups[[i]]
+    no = one_group$intersection/one_group$minimal_hv
+    mean_no = mean(no)
+    linear_model = lm(no ~ one_group$divergence_time)
+    intercept_no =linear_model$coefficients["(Intercept)"]
+    one_group_metric = c(group_name, mean_no, intercept_no)
+    sister_no_metrics = rbind(sister_no_metrics, one_group_metric)
+  }
+}
+
+sister_no_metrics = data.frame(sister_no_metrics)
+colnames(sister_no_metrics) = c("state", "mean_no", "intercept_no")
+rownames(sister_no_metrics) = NULL
+sister_no_metrics$mean_no = as.numeric(sister_no_metrics$mean_no)
+sister_no_metrics$intercept_no = as.numeric(sister_no_metrics$intercept_no)
 
 #exporting
-write.table(sister_hv_distance, "2_sister_hypervolume/sister_hv_distance.csv", sep=',', quote=F, row.names=T)
+write.table(sister_no_metrics, "2_sister_hypervolume/sister_no_metrics.csv", sep=',', quote=F, row.names=F)
