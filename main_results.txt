@@ -1,3 +1,29 @@
+### RO intercept
+> aggregate(sister_ro_metrics$intercept_ro, by = list(sister_ro_metrics$state), mean )
+  Group.1         x
+1      AF 0.9378070
+2 AFother 0.8649860
+3   other 0.7011589
+> aggregate(sister_ro_metrics$intercept_ro, by = list(sister_ro_metrics$state), sd )
+  Group.1          x
+1      AF 0.10353101
+2 AFother 0.03082796
+3   other 0.06737273
+
+
+### NO intercept
+> aggregate(sister_no_metrics$intercept_no, by = list(sister_no_metrics$state), mean )
+  Group.1         x
+1      AF 0.1431599
+2 AFother 0.2667755
+3   other 0.1860237
+> aggregate(sister_no_metrics$intercept_no, by = list(sister_no_metrics$state), sd )
+  Group.1          x
+1      AF 0.03327585
+2 AFother 0.03106870
+3   other 0.01956407
+
+
 ### geosse
 > table(best_fit_models$model_name)
   d  sd sxd 

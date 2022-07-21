@@ -108,3 +108,29 @@ sister_ro_metrics$intercept_ro = as.numeric(sister_ro_metrics$intercept_ro)
 
 #exporting
 write.table(sister_ro_metrics, "3_sister_geography/sister_ro_metrics.csv", sep=',', quote=F, row.names=F)
+
+############################## analyzing RO metrics ############################
+
+sister_ro_metrics = read.table("3_sister_geography/sister_ro_metrics.csv", sep=',', h=T)
+
+### summary by state
+means = aggregate(sister_ro_metrics$intercept_ro, by = list(sister_ro_metrics$state), mean )
+aggregate(sister_ro_metrics$intercept_ro, by = list(sister_ro_metrics$state), sd )
+
+diff_12 = means$x[1] -  means$x[2]
+diff_13 = means$x[1] -  means$x[3]
+diff_23 = means$x[2] -  means$x[3]
+
+### permutation test
+rand_diff_12 = rand_diff_13 = rand_diff_23 = c()
+for( i in 1:1000){
+  rand_state = sample(sister_ro_metrics$state)
+  rand_means =aggregate(sister_ro_metrics$intercept_ro, by = list(rand_state), mean )
+  rand_diff_12[i] = rand_means$x[1] - rand_means$x[2]
+  rand_diff_13[i] = rand_means$x[1] - rand_means$x[3]
+  rand_diff_23[i] = rand_means$x[2] - rand_means$x[3]
+}
+
+1 - ( sum(diff_12 > rand_diff_12)/1001 )
+1 - ( sum(diff_13 > rand_diff_13)/1001 )
+1 - ( sum(diff_23 > rand_diff_23)/1001 )
