@@ -207,6 +207,9 @@ for( i in 1:1000){
   rand_diff_23[i] = rand_means$x[2] - rand_means$x[3]
 }
 
-1 - ( sum(diff_12 > rand_diff_12)/1001 )
-1 - ( sum(diff_13 > rand_diff_13)/1001 )
+
+1 - ( sum(diff_12 < rand_diff_12)/1001 )
+1 - ( sum(diff_13 < rand_diff_13)/1001 )
 1 - ( sum(diff_23 > rand_diff_23)/1001 )
+
+

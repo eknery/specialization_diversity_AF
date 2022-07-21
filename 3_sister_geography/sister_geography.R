@@ -134,3 +134,21 @@ for( i in 1:1000){
 1 - ( sum(diff_12 > rand_diff_12)/1001 )
 1 - ( sum(diff_13 > rand_diff_13)/1001 )
 1 - ( sum(diff_23 > rand_diff_23)/1001 )
+
+######################### geographic overlap ~ specialization #######################
+
+spp_hvolumes = read.table("1_hypervolume_inference/spp_hvolumes.csv", sep=',', h=T)
+hvolumes = spp_hvolumes$hvolume
+
+sister_ro_metrics = c()
+for (n in 1:length(phylo_trees) ){ 
+  n = 1
+  sister_area_comparison = read.table(paste("3_sister_geography/sister_area_comparisons/sister_area_comparison_", as.character(n), ".csv", sep=""), sep=',', h=T)
+  ro = sister_area_comparison$intersection / sister_area_comparison$minimal_area
+  linear_model = lm(ro ~ poly(hvolumes,2))
+  
+  plot(ro  ~ hvolumes )
+  abline(linear_model)
+}
+
+hist( sqrt(ro) )
