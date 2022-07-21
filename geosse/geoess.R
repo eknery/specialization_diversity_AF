@@ -105,4 +105,21 @@ table(best_fit_models$model_name)
 ### exporting
 write.table(best_fit_models, "geosse/geosse_best_fit_models.csv", sep=",", quote=F, row.names = F)
 
+#################### summarizing best model estimates #########################
+best_fit_models = read.table("geosse/geosse_best_fit_models.csv", sep=",", h = T)
+
+d_lin_params = read.table("geosse/d_lin_params.csv", sep=",",  h = T)
+sd_s_lin_params = read.table("geosse/sd_s_lin_params.csv", sep=",",  h = T)
+sxd_sx_lin_params = read.table("geosse/sxd_sx_lin_params.csv", sep=",", h = T)
+
+### most common model
+most_repeated = max(table(best_fit_models$model_name))
+common_model = names(which(table(best_fit_models$model_name) == most_repeated) ) 
+common_scenario = which(best_fit_models$model_name == common_model)
+common_params = sd_s_lin_params[common_scenario,]
+
+### descriptive statistics
+apply(common_params, MARGIN = 2, FUN=mean)
+apply(common_params, MARGIN = 2, FUN=sd)
+
 

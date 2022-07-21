@@ -1,3 +1,7 @@
+### geosse
+> table(best_fit_models$model_name)
+  d  sd sxd 
+ 60  29  11
 
 ### geosse_time
 > table(best_geosse_time$model_name)
@@ -5,12 +9,13 @@
  17  82   1 
 
 # geosse_time: most common = sd_s_lin
-> apply(common_params, MARGIN = 2, FUN=median)
+> apply(common_params, MARGIN = 2, FUN=mean)
          sA.c          sA.m          sB.c          sB.m         sAB.c         sAB.m          xB.c          xB.m            dA            dB 
- 1.027745e-01  6.097715e-02  1.241520e-01  2.187945e-01  2.184113e-06 -1.561381e-08  5.669683e-04 -5.639040e-05  9.414211e-02  1.717605e-01 
-> apply(common_params, MARGIN = 2, FUN=IQR)
+ 1.070632e-01  6.327266e-02  1.256793e-01  2.283952e-01  4.436149e-05  9.744945e-04  3.593866e-02 -4.813563e-03  9.416223e-02  1.749241e-01 
+> apply(common_params, MARGIN = 2, FUN=sd)
         sA.c         sA.m         sB.c         sB.m        sAB.c        sAB.m         xB.c         xB.m           dA           dB 
-4.436836e-02 2.849017e-02 6.346478e-02 1.161001e-01 2.745222e-05 4.258974e-06 3.764400e-02 5.054244e-03 1.795501e-02 5.106429e-02 
+0.0310780693 0.0203203573 0.0591392105 0.0857290940 0.0001152464 0.0051998352 0.0713185727 0.0094373704 0.0157619268 0.0366965068 
+
  
 ### quasse
 > table(best_fit_models$model_name)
@@ -18,9 +23,9 @@
 100  
 
 # quasse: most common = lm
-> apply(common_params, MARGIN = 2, FUN=median)
+> apply(common_params, MARGIN = 2, FUN=mean)
           l.c           l.m           m.c           m.m     diffusion 
-   0.45958301   -0.01941062 -720.04326013 -251.03218423   10.37314582 
-> apply(common_params, MARGIN = 2, FUN=IQR)
+ 4.641613e-01 -1.150314e-02 -1.903645e+05 -5.878463e+04  1.192078e+01 
+> apply(common_params, MARGIN = 2, FUN=sd)
          l.c          l.m          m.c          m.m    diffusion 
-1.533446e-01 3.745334e-02 3.484729e+03 6.359193e+02 5.685264e+00
+8.882856e-02 1.804346e-02 3.688573e+05 1.087927e+05 7.434376e+00

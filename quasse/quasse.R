@@ -141,8 +141,8 @@ common_scenario = which(best_fit_models$model_name == common_model)
 common_params = lm_lin_params[common_scenario,]
 
 ### descriptive statistics
-apply(common_params, MARGIN = 2, FUN=median)
-apply(common_params, MARGIN = 2, FUN=IQR)
+apply(common_params, MARGIN = 2, FUN=mean)
+apply(common_params, MARGIN = 2, FUN=sd)
 
 ################################## plotting #############################
 library(tidyverse)
