@@ -10,6 +10,13 @@
 2 AFother 0.03082796
 3   other 0.06737273
 
+# permutation test
+> 1 - ( sum(diff_12 > rand_diff_12)/1001 )
+[1] 0.000999001
+> 1 - ( sum(diff_13 > rand_diff_13)/1001 )
+[1] 0.000999001
+> 1 - ( sum(diff_23 > rand_diff_23)/1001 )
+[1] 0.000999001
 
 ### NO intercept
 > aggregate(sister_no_metrics$intercept_no, by = list(sister_no_metrics$state), mean )
@@ -23,6 +30,15 @@
 2 AFother 0.03106870
 3   other 0.01956407
 
+bonferroni = 0.05 / 3 = 0.01
+
+# permutation test
+> 1 - ( sum(diff_12 < rand_diff_12)/1001 )
+[1] 0.000999001
+> 1 - ( sum(diff_13 < rand_diff_13)/1001 )
+[1] 0.005994006
+> 1 - ( sum(diff_23 > rand_diff_23)/1001 )
+[1] 0.000999001
 
 ### geosse
 > table(best_fit_models$model_name)
@@ -33,7 +49,7 @@
 > table(best_geosse_time$model_name)
   d  sd sxd 
  17  82   1 
-
+ 
 # geosse_time: most common = sd_s_lin
 > apply(common_params, MARGIN = 2, FUN=mean)
          sA.c          sA.m          sB.c          sB.m         sAB.c         sAB.m          xB.c          xB.m            dA            dB 
