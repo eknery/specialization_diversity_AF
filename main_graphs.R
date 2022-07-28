@@ -60,8 +60,8 @@ dev.off()
 
 ############################## best-fit geosse-time estimates #################################
 
+### loading fit values and model parameters
 best_fit_models = read.table("geosse_time/geosse_time_best_fit_models.csv", sep=",", h = T)
-
 sd_s_lin_params = read.table("geosse_time/sd_s_lin_params.csv", sep=",",  h = T)
 
 ### most common model
@@ -76,67 +76,33 @@ xend = rep(5, nrow(frequent_model_params))
 y_lim=c(0,1.5)
 
 # axis names
-x_axis_name = "time (million years)"
+x_axis_name = "time (million years ago)"
 y_axis_name = "lambda"
 
-### sA line estimates = outside
-intercepts_a = frequent_model_params$sA.c 
-angulars_a = frequent_model_params$sA.m
-lines_a = data.frame(x1, xend, y1= intercepts_a, yend= xend*angulars_a + intercepts_a)
+### only AF parameters
 
-sa = ggplot() +
-  geom_segment(data = lines_a, color="#D81B60", size=1.2, alpha=0.1,  aes(x = x1, y = y1, xend = xend, yend = yend), inherit.aes = FALSE)+
-  ylim(y_lim)+
-  xlab(x_axis_name) + ylab("")+
-  theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=9,face="bold"),axis.text=element_text(size=6),legend.position = "none")
-
-### sB line estimates = AF
+# sB line estimates = AF
 intercepts_b = frequent_model_params$sB.c 
 angulars_b = frequent_model_params$sB.m
 lines_b = data.frame(x1, xend, y1= intercepts_b, yend = xend*angulars_b + intercepts_b)
-
-sb = ggplot() +
-  geom_segment(data = lines_b, color="#1E88E5", size=1.2, alpha=0.1,  aes(x = x1, y = y1, xend = xend, yend = yend), inherit.aes = FALSE)+
-  ylim(y_lim)+
-  xlab(x_axis_name)+ ylab(y_axis_name)+
-  theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=9,face="bold"),axis.text=element_text(size=6),legend.position = "none")
-
-### sAB line estimates
-intercepts_ab = common_params$sAB.c 
-angulars_ab = common_params$sAB.m
-lines_ab = data.frame(x1, xend, y1= intercepts_ab, yend = xend*angulars_ab + intercepts_ab)
-
-sab = ggplot() +
-  geom_segment(data = lines_ab, color="#FFC107", size=1.2, alpha=0.1,  aes(x = x1, y = y1, xend = xend, yend = yend), inherit.aes = FALSE)+
-  ylim(y_lim)+
-  xlab(x_axis_name)+ ylab("")+
-  theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=9,face="bold"),axis.text=element_text(size=6),legend.position = "none")
-
-tiff("geosse_time/geosse_time_lambda.tiff", units="in", width=4.5, height=1.75, res=600)
-ggarrange(sb,sab, sa, nrow=1,ncol=3)
-dev.off()
-
-##### only AF-lambda
 
 # mean line
 mean_intercept_b = mean(intercepts_b)
 mean_angular_b = mean(angulars_b)
 mean_line_b = data.frame(x1, xend, y1= mean_intercept_b, yend= xend*mean_angular_b + mean_intercept_b)
 
-# common values
-x1 = rep(0, nrow(frequent_model_params))
-xend = rep(5, nrow(frequent_model_params))
-y_lim=c(0,1.5)
-
-# axis names
-x_axis_name = "time (million years)"
-y_axis_name = "lambda"
+# se line
+se_intercept_b = sd(intercepts_b) / sqrt(length((intercepts_b)))
+se_angular_b = sd(angulars_b) / sqrt(length((intercepts_b)))
+se_line_b_up = data.frame(x1, xend, y1= mean_intercept_b + se_intercept_b, yend= xend*(mean_angular_b + se_angular_b) + (mean_intercept_b + se_intercept_b) )
+se_line_b_dw = data.frame(x1, xend, y1= mean_intercept_b - se_intercept_b, yend= xend*(mean_angular_b - se_angular_b) + (mean_intercept_b - se_intercept_b) )
 
 tiff("7_graphs/geosse_time_lambda_AF.tiff", units="in", width=3.5, height=3, res=600)
 ggplot() +
-  geom_segment(data = lines_b, color="gray", size=0.75, alpha=0.5,  aes(x = x1, y = y1, xend = xend, yend = yend), inherit.aes = FALSE)+
-  geom_segment(data = mean_line_b, color="black", size=1, alpha=1,  aes(x = x1, y = y1, xend = xend, yend = yend))+
-  geom_vline(aes(xintercept = 2.58),linetype="dotted",colour="black",size=0.75)+
+  geom_segment(data = mean_line_b[1,], color="black", size=0.75, alpha=1,  aes(x = x1, y = y1, xend = xend, yend = yend), inherit.aes = FALSE)+
+  geom_segment(data = se_line_b_up[1,], color="black", size=0.5, alpha=0.5,  aes(x = x1, y = y1, xend = xend, yend = yend))+
+  geom_segment(data = se_line_b_dw[1,], color="black", size=0.5, alpha=0.5,  aes(x = x1, y = y1, xend = xend, yend = yend))+
+  geom_vline(aes(xintercept = c(0.05,2.58)),linetype="dotted",colour="gray",size=0.75)+
   ylim(y_lim)+
   xlab(x_axis_name)+ ylab(y_axis_name)+
   theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=9,face="bold"),axis.text=element_text(size=6),legend.position = "none")
@@ -191,9 +157,16 @@ intercepts = common_params$l.c
 angulars = common_params$l.m
 lines = data.frame(x1, xend, y1= intercepts, yend= xend*angulars + intercepts)
 
+# mean line
 mean_intercept = mean(intercepts)
 mean_angular = mean(angulars)
 mean_line = data.frame(x1, xend, y1= mean_intercept, yend= xend*mean_angular + mean_intercept)
+
+# se line
+se_intercept = sd(intercepts) / sqrt(length((intercepts)))
+se_angular = sd(angulars) / sqrt(length((intercepts)))
+se_line_up = data.frame(x1, xend, y1= mean_intercept + se_intercept, yend= xend*(mean_angular + se_angular) + (mean_intercept + se_intercept) )
+se_line_dw = data.frame(x1, xend, y1= mean_intercept - se_intercept, yend= xend*(mean_angular - se_angular) + (mean_intercept - se_intercept) )
 
 # axis names
 x_axis_name = "hypervolume size"
@@ -201,12 +174,73 @@ y_axis_name = "lambda"
 
 tiff("7_graphs/quasse_lambda.tiff", units="in", width=3.5, height=3, res=600)
 ggplot() +
-  geom_segment(data = lines, color="gray", size=0.75, alpha=0.5,  aes(x = x1, y = y1, xend = xend, yend = yend), inherit.aes = FALSE)+
-  geom_segment(data = mean_line, color="black", size=1, alpha=1,  aes(x = x1, y = y1, xend = xend, yend = yend))+
-  geom_vline(data= summary_hv[1,], aes(xintercept = mean),linetype="solid", color= "#1E88E5", size=0.75)+
-  geom_vline(data= summary_hv[1,], aes(xintercept = mean-sd),linetype="dotted", color= "#1E88E5", size=0.5)+
-  geom_vline(data= summary_hv[1,], aes(xintercept = mean+sd),linetype="dotted", color= "#1E88E5", size=0.5)+
-  ylim(y_lim)+
+  geom_segment(data = mean_line[1,], color="black", size=0.75, alpha=1,  aes(x = x1, y = y1, xend = xend, yend = yend), inherit.aes = FALSE)+
+  geom_segment(data = se_line_up[1,], color="black", size=0.5, alpha=0.5,  aes(x = x1, y = y1, xend = xend, yend = yend))+
+  geom_segment(data = se_line_dw[1,], color="black", size=0.5, alpha=0.5,  aes(x = x1, y = y1, xend = xend, yend = yend))+
+  #geom_vline(data= summary_hv, aes(xintercept = mean), linetype="dotted", color= "#1E88E5", size=0.5)+
+  geom_vline(data= summary_hv, aes(xintercept = mean-se),linetype="dotted", colour= c(mycols), size=0.5)+
+  geom_vline(data= summary_hv, aes(xintercept = mean+se),linetype="dotted", colour= c(mycols), size=0.5)+
+  ylim(c(0,1))+
   xlab(x_axis_name) + ylab(y_axis_name)+
   theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=9,face="bold"),axis.text=element_text(size=6),legend.position = "none")
 dev.off()
+
+
+############################## SUPPLEMENTARY MATERIAL ######################
+
+### loading fit values and model parameters
+best_fit_models = read.table("geosse_time/geosse_time_best_fit_models.csv", sep=",", h = T)
+sd_s_lin_params = read.table("geosse_time/sd_s_lin_params.csv", sep=",",  h = T)
+
+### most common model
+most_repeated = max(table(best_fit_models$model_name))
+frequent_model = names(which(table(best_fit_models$model_name) == most_repeated) ) 
+frequent_model_n = which(best_fit_models$model_name == frequent_model)
+frequent_model_params = sd_s_lin_params[frequent_model_n,]
+
+### common values
+x1 = rep(0, nrow(frequent_model_params))
+xend = rep(5, nrow(frequent_model_params))
+y_lim=c(0,1.5)
+
+# axis names
+x_axis_name = "time (million years)"
+y_axis_name = "lambda"
+
+### sA line estimates = outside
+intercepts_a = frequent_model_params$sA.c 
+angulars_a = frequent_model_params$sA.m
+lines_a = data.frame(x1, xend, y1= intercepts_a, yend= xend*angulars_a + intercepts_a)
+
+sa = ggplot() +
+  geom_segment(data = lines_a, color="#D81B60", size=1.2, alpha=0.1,  aes(x = x1, y = y1, xend = xend, yend = yend), inherit.aes = FALSE)+
+  ylim(y_lim)+
+  xlab(x_axis_name) + ylab("")+
+  theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=9,face="bold"),axis.text=element_text(size=6),legend.position = "none")
+
+### sB line estimates = AF
+intercepts_b = frequent_model_params$sB.c 
+angulars_b = frequent_model_params$sB.m
+lines_b = data.frame(x1, xend, y1= intercepts_b, yend = xend*angulars_b + intercepts_b)
+
+sb = ggplot() +
+  geom_segment(data = lines_b, color="#1E88E5", size=1.2, alpha=0.1,  aes(x = x1, y = y1, xend = xend, yend = yend), inherit.aes = FALSE)+
+  ylim(y_lim)+
+  xlab(x_axis_name)+ ylab(y_axis_name)+
+  theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=9,face="bold"),axis.text=element_text(size=6),legend.position = "none")
+
+### sAB line estimates
+intercepts_ab = common_params$sAB.c 
+angulars_ab = common_params$sAB.m
+lines_ab = data.frame(x1, xend, y1= intercepts_ab, yend = xend*angulars_ab + intercepts_ab)
+
+sab = ggplot() +
+  geom_segment(data = lines_ab, color="#FFC107", size=1.2, alpha=0.1,  aes(x = x1, y = y1, xend = xend, yend = yend), inherit.aes = FALSE)+
+  ylim(y_lim)+
+  xlab(x_axis_name)+ ylab("")+
+  theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=9,face="bold"),axis.text=element_text(size=6),legend.position = "none")
+
+tiff("geosse_time/geosse_time_lambda.tiff", units="in", width=4.5, height=1.75, res=600)
+ggarrange(sb,sab, sa, nrow=1,ncol=3)
+dev.off()
+
