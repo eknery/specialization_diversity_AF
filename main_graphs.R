@@ -87,21 +87,21 @@ angulars_b = frequent_model_params$sB.m
 lines_b = data.frame(x1, xend, y1= intercepts_b, yend = xend*angulars_b + intercepts_b)
 
 # mean line
-mean_intercept_b = mean(intercepts_b)
-mean_angular_b = mean(angulars_b)
-mean_line_b = data.frame(x1, xend, y1= mean_intercept_b, yend= xend*mean_angular_b + mean_intercept_b)
+mean_line_b = apply(lines_b, MARGIN = 2, FUN= mean)
 
 # se line
-se_intercept_b = sd(intercepts_b) / sqrt(length((intercepts_b)))
-se_angular_b = sd(angulars_b) / sqrt(length((intercepts_b)))
-se_line_b_up = data.frame(x1, xend, y1= mean_intercept_b + se_intercept_b, yend= xend*(mean_angular_b + se_angular_b) + (mean_intercept_b + se_intercept_b) )
-se_line_b_dw = data.frame(x1, xend, y1= mean_intercept_b - se_intercept_b, yend= xend*(mean_angular_b - se_angular_b) + (mean_intercept_b - se_intercept_b) )
+se_line_b = apply(lines_b, MARGIN = 2, FUN= sd) /  sqrt(nrow(lines_b))
+se_line_b_up = mean_line_b + se_line_b
+se_line_b_dw =  mean_line_b - se_line_b
+
+# dataframe with all lines
+lines_b_df = data.frame(rbind(mean_line_b, se_line_b_up, se_line_b_dw))
 
 tiff("7_graphs/geosse_time_lambda_AF.tiff", units="in", width=3.5, height=3, res=600)
 ggplot() +
-  geom_segment(data = mean_line_b[1,], color="black", size=0.75, alpha=1,  aes(x = x1, y = y1, xend = xend, yend = yend), inherit.aes = FALSE)+
-  geom_segment(data = se_line_b_up[1,], color="black", size=0.5, alpha=0.5,  aes(x = x1, y = y1, xend = xend, yend = yend))+
-  geom_segment(data = se_line_b_dw[1,], color="black", size=0.5, alpha=0.5,  aes(x = x1, y = y1, xend = xend, yend = yend))+
+  geom_segment(data = lines_b_df[1,], color="black", size=0.75, alpha=1,  aes(x = x1, y = y1, xend = xend, yend = yend), inherit.aes = FALSE)+
+  geom_segment(data = lines_b_df[2,], color="black", size=0.5, alpha=0.5,  aes(x = x1, y = y1, xend = xend, yend = yend))+
+  geom_segment(data = lines_b_df[3,], color="black", size=0.5, alpha=0.5,  aes(x = x1, y = y1, xend = xend, yend = yend))+
   geom_vline(aes(xintercept = c(0.05,2.58)),linetype="dotted",colour="gray",size=0.75)+
   ylim(y_lim)+
   xlab(x_axis_name)+ ylab(y_axis_name)+
@@ -158,15 +158,15 @@ angulars = common_params$l.m
 lines = data.frame(x1, xend, y1= intercepts, yend= xend*angulars + intercepts)
 
 # mean line
-mean_intercept = mean(intercepts)
-mean_angular = mean(angulars)
-mean_line = data.frame(x1, xend, y1= mean_intercept, yend= xend*mean_angular + mean_intercept)
+mean_line = apply(lines, MARGIN = 2, FUN= mean)
 
 # se line
-se_intercept = sd(intercepts) / sqrt(length((intercepts)))
-se_angular = sd(angulars) / sqrt(length((intercepts)))
-se_line_up = data.frame(x1, xend, y1= mean_intercept + se_intercept, yend= xend*(mean_angular + se_angular) + (mean_intercept + se_intercept) )
-se_line_dw = data.frame(x1, xend, y1= mean_intercept - se_intercept, yend= xend*(mean_angular - se_angular) + (mean_intercept - se_intercept) )
+se_line = apply(lines, MARGIN = 2, FUN= sd) /  sqrt(nrow(lines))
+se_line_up = mean_line + se_lines_b
+se_line_dw =  mean_line - se_line_b
+
+# dataframe with all lines
+lines_df = data.frame(rbind(mean_line_b, se_line_b_up, se_line_b_dw))
 
 # axis names
 x_axis_name = "hypervolume size"
