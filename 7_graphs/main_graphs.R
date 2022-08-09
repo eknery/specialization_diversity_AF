@@ -1,5 +1,7 @@
 setwd("C:/Users/eduar/Documents/GitHub/specialization_diversity_AF")
 
+devtools::install_github("liamrevell/phytools")
+
 library (phytools)
 library(tidyverse)
 library(PupillometryR)
@@ -11,6 +13,19 @@ library(Hmisc)
 library(plyr)
 library(RColorBrewer)
 library(reshape2)
+
+################################## Phylo tree and LTT plot ####################################
+
+### loading mcc phylogenetic tree
+mcc = read.tree("0_data/mcc_phylo.nwk")
+phylo_trees = read.tree("0_data/100_rand_phylos.nwk")
+
+### loading species' hypervolumes
+spp_hvolumes = read.table("1_hypervolume_inference/spp_hvolumes.csv", h=T, sep=",")
+
+# named vector of hypervolumes
+hvolumes = spp_hvolumes$hvolume
+names(hvolumes) = spp_hvolumes$species
 
 ### loading occurrence count per domain
 spp_count_domain = read.table("0_data/spp_count_domain.csv", h=T, sep=",")
@@ -28,41 +43,31 @@ names(geo_states) = spp_count_domain$species
 mycols = c( "#1E88E5", "#FFC107", "#D81B60")
 names(mycols) = c("AF", "AFother", "other")
 
-################################## Phylo tree and LTT plot ####################################
 
-### loading mcc phylogenetic tree
-mcc = read.tree("0_data/mcc_phylo.nwk")
-phylo_trees = read.tree("0_data/100_rand_phylos.nwk")
+### stochastic mapping
+# simulate character evolution
+maps = make.simmap(mcc, geo_states , model="ARD", pi='estimated', nsim=100)
 
-### loading species' hypervolumes
-spp_hvolumes = read.table("1_hypervolume_inference/spp_hvolumes.csv", h=T, sep=",")
+# choos one map
+n = 10
 
-# named vector of hypervolumes
-hvolumes = spp_hvolumes$hvolume
-names(hvolumes) = spp_hvolumes$species
+# count lineage through time
+ltt_obj = ltt(maps[[n]], plot=FALSE)
 
-# geographic state matrix
-geo_state_matrix = matrix(0, ncol= length(unique(geo_states)), nrow= length(mcc$tip.label) )
+# plot both!
+layout(matrix(c(1,2),2,1),heights=c(0.5,0.4))
+  plot(maps[[n]], mycols, ftype="off", mar=c(0,4.1,1.1,1.1))
+  grid( ny= NA)
+  par(mar=c(5.1,4.1,0,1.1))
+  plot(ltt_obj,colors=mycols,bty="n",las=1,lwd=3,show.tree=F, legend=T, ylim=c(1,Ntip(mcc)), xlab="time (above the root)")
+  legend("topleft",names(mycols),pch=22,pt.bg=mycols, bty="n",cex=0.8,pt.cex=1.2)
+  grid( ny= NA)
+simmap_ltt_plot = recordPlot()
 
-for(sp_name in mcc$tip.label ){
-  n = which(mcc$tip.label == sp_name)
-  if (geo_states[sp_name] == "AF"){
-    geo_state_matrix[n,1] = 1
-  } 
-  if (geo_states[sp_name] == "AFother"){
-    geo_state_matrix[n,2] = 1
-  } 
-  if (geo_states[sp_name] == "other"){
-    geo_state_matrix[n,3] = 1
-  } 
-}
-colnames(geo_state_matrix) =  c("AF", "AFother", "other")
-
-tiff("7_graphs/mcc_phylo_tree.tiff", units="in", width=3.5, height=4, res=600)
-  plotTree.wBars(ladderize(mcc), hvolumes, type="phylogram",fsize=0.5, col="gray", lmethod="plotTree")
-  tiplabels(pie=geo_state_matrix,piecol=mycols,  cex=0.4)
-  axisPhylo(pos=c(0.5), font=3, cex.axis=0.5)
+tiff("7_graphs/simmap_ltt.tiff", units="in", width=4, height=6, res=600)
+  simmap_ltt_plot
 dev.off()
+
 
 tiff("7_graphs/ltt_95_ln.tiff", units="in", width=5, height=3, res=600)
 llt_95_obj = ltt95(trees= phylo_trees, alpha=0.05, log=T, method="lineages",mode="mean",
