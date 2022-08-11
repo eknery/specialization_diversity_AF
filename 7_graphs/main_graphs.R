@@ -1,7 +1,5 @@
 setwd("C:/Users/eduar/Documents/GitHub/specialization_diversity_AF")
 
-devtools::install_github("liamrevell/phytools")
-
 library (phytools)
 library(tidyverse)
 library(PupillometryR)
@@ -14,11 +12,11 @@ library(plyr)
 library(RColorBrewer)
 library(reshape2)
 
-################################## Phylo tree and LTT plot ####################################
-
 ### loading mcc phylogenetic tree
 mcc = read.tree("0_data/mcc_phylo.nwk")
-phylo_trees = read.tree("0_data/100_rand_phylos.nwk")
+
+### loading species' altitude
+spp_altitude = read.table("0_data/spp_altitude.csv", sep=',', h=T)
 
 ### loading species' hypervolumes
 spp_hvolumes = read.table("1_hypervolume_inference/spp_hvolumes.csv", h=T, sep=",")
@@ -43,6 +41,7 @@ names(geo_states) = spp_count_domain$species
 mycols = c( "#1E88E5", "#FFC107", "#D81B60")
 names(mycols) = c("AF", "AFother", "other")
 
+################################## Phylo tree and LTT plot ####################################
 
 ### stochastic mapping
 # simulate character evolution
@@ -68,12 +67,35 @@ tiff("7_graphs/simmap_ltt.tiff", units="in", width=4, height=6, res=600)
   simmap_ltt_plot
 dev.off()
 
+####################### Describing altitude, time, and niche breadth #############
 
-tiff("7_graphs/ltt_95_ln.tiff", units="in", width=5, height=3, res=600)
-llt_95_obj = ltt95(trees= phylo_trees, alpha=0.05, log=T, method="lineages",mode="mean",
-                   res=100, xaxis="negative", shaded=T, bg="gray")
+spp_altitude = data.frame(geo_states, spp_altitude)
+spp_hvolumes = data.frame(geo_states, spp_hvolumes)
+
+axis_title_size = 10
+x_text_size = 8
+
+alt_plot = ggplot(data= spp_altitude, aes(x=geo_states, y=altitude, fill= geo_states)) +
+  geom_point(aes(color=geo_states),position = position_jitter(width = 0.07), size = 1.5, alpha = 0.25) +
+  geom_boxplot(width = 0.4, outlier.shape = NA, alpha = 0.50)+
+  scale_fill_manual(values=mycols)+
+  scale_colour_manual(values=mycols)+
+  xlab("geographic distribution")+ ylab("median altitude (m)")+
+  scale_x_discrete(labels=c("AF" = "AF-endemic", "AFother" = "AF and other", "other" = "outside AF"))+
+  theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=axis_title_size,face="bold"),axis.text.x=element_text(size=x_text_size),axis.text.y = element_text(angle = 90),legend.position = "none")
+
+hv_plot = ggplot(data= spp_hvolumes, aes(x=geo_states, y=hvolume, fill= geo_states)) +
+  geom_point(aes(color=geo_states),position = position_jitter(width = 0.07), size = 1.5, alpha = 0.25) +
+  geom_boxplot(width = 0.4, outlier.shape = NA, alpha = 0.50)+
+  scale_fill_manual(values=mycols)+
+  scale_colour_manual(values=mycols)+
+  xlab("geographic distribution")+ ylab("hypervolume size")+
+  scale_x_discrete(labels=c("AF" = "AF-endemic", "AFother" = "AF and other", "other" = "outside AF"))+
+  theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=axis_title_size,face="bold"),axis.text.x=element_text(size=x_text_size),legend.position = "none")
+
+tiff("7_graphs/species_data.tiff", units="in", width=3, height=5, res=600)
+  ggarrange(alt_plot,hv_plot, nrow=2,ncol=1)
 dev.off()
-
 
 ################################## RO and NO intercepts #########################
 
@@ -81,9 +103,11 @@ dev.off()
 sister_no_metrics = read.table("2_sister_hypervolume/sister_no_metrics.csv", sep=',', h=T)
 sister_ro_metrics = read.table("3_sister_geography/sister_ro_metrics.csv", sep=',', h=T)
 
+
+
 ### sister ro metrics
 tiff("7_graphs/RO_intercept_geographic_distribution.tiff", units="in", width=3.5, height=3, res=600)
-ggplot(data= sister_ro_metrics, aes(x=state, y=intercept_ro, fill= state)) +
+ro_plot = ggplot(data= sister_ro_metrics, aes(x=state, y=intercept_ro, fill= state)) +
   geom_point(aes(color=state),position = position_jitter(width = 0.07), size = 1.5, alpha = 0.25) +
   geom_boxplot(width = 0.2, outlier.shape = NA, alpha = 0.50)+
   geom_flat_violin(position = position_nudge(x = 0.12, y = 0), alpha = 0.50) +
@@ -96,7 +120,7 @@ dev.off()
 
 ### sister no metrics
 tiff("7_graphs/NO_intercept_geographic_distribution.tiff", units="in", width=3.5, height=3, res=600)
-ggplot(data= sister_no_metrics, aes(x=state, y=intercept_no, fill= state)) +
+no_plot = ggplot(data= sister_no_metrics, aes(x=state, y=intercept_no, fill= state)) +
   geom_point(aes(color=state),position = position_jitter(width = 0.07), size = 1.5, alpha = 0.25) +
   geom_boxplot(width = 0.2, outlier.shape = NA, alpha = 0.50)+
   geom_flat_violin(position = position_nudge(x = 0.12, y = 0), alpha = 0.50) +
@@ -105,6 +129,10 @@ ggplot(data= sister_no_metrics, aes(x=state, y=intercept_no, fill= state)) +
   xlab("geographic distribution")+ ylab("NO intercept")+
   scale_x_discrete(labels=c("AF" = "AF-endemic", "AFother" = "AF and other\ndomains", "other" = "outside AF"))+
   theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=14,face="bold"),axis.text.x=element_text(size=8),legend.position = "none")
+dev.off()
+
+tiff("7_graphs/intercepts_data.tiff", units="in", width=6, height=2.5, res=600)
+  ggarrange(ro_plot,no_plot, nrow=1,ncol=2)
 dev.off()
 
 ############################## best-fit geosse-time estimates #################################
@@ -165,28 +193,6 @@ lm_lin_params = read.table("quasse/lm_lin_params.csv", sep=",", h = T)
 
 # setting the common parameters
 common_params = lm_lin_params
-
-### loading species' hypervolumes
-spp_hvolumes = read.table("1_hypervolume_inference/spp_hvolumes.csv", h=T, sep=",")
-
-# named vector of hypervolumes
-hvolumes = spp_hvolumes$hvolume
-names(hvolumes) = spp_hvolumes$species
-
-### loading occurrence count per domain
-spp_count_domain = read.table("0_data/spp_count_domain.csv", h=T, sep=",")
-
-# define states threshold
-high_ths = 0.9
-low_ths = (1 - high_ths)
-geo_states = af_percentage = spp_count_domain$AF/ apply(spp_count_domain[,-1], MARGIN = 1, FUN=sum)
-geo_states[af_percentage >= high_ths] = "AF"
-geo_states[af_percentage <= low_ths] = "other"
-geo_states[af_percentage > low_ths & af_percentage < high_ths] = "AFother"
-names(geo_states) = spp_count_domain$species
-
-# my colors
-mycols = c( "#1E88E5", "#FFC107", "#D81B60")
 
 ### summary hypervolume per geographic state
 mean_hv = aggregate(hvolumes, by=list(geo_states), mean)
