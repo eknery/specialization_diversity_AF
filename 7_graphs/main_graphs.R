@@ -69,6 +69,7 @@ dev.off()
 
 ####################### Describing altitude, time, and niche breadth #############
 
+### loading species altitude and niche breadth
 spp_altitude = data.frame(geo_states, spp_altitude)
 spp_hvolumes = data.frame(geo_states, spp_hvolumes)
 
@@ -103,10 +104,9 @@ dev.off()
 sister_no_metrics = read.table("2_sister_hypervolume/sister_no_metrics.csv", sep=',', h=T)
 sister_ro_metrics = read.table("3_sister_geography/sister_ro_metrics.csv", sep=',', h=T)
 
-
+axis_title_size = 10
 
 ### sister ro metrics
-tiff("7_graphs/RO_intercept_geographic_distribution.tiff", units="in", width=3.5, height=3, res=600)
 ro_plot = ggplot(data= sister_ro_metrics, aes(x=state, y=intercept_ro, fill= state)) +
   geom_point(aes(color=state),position = position_jitter(width = 0.07), size = 1.5, alpha = 0.25) +
   geom_boxplot(width = 0.2, outlier.shape = NA, alpha = 0.50)+
@@ -115,11 +115,9 @@ ro_plot = ggplot(data= sister_ro_metrics, aes(x=state, y=intercept_ro, fill= sta
   scale_colour_manual(values=mycols)+
   xlab("geographic distribution")+ ylab("RO intercept")+
   scale_x_discrete(labels=c("AF" = "AF-endemic", "AFother" = "AF and other\ndomains", "other" = "outside AF"))+
-  theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=14,face="bold"),axis.text.x=element_text(size=8),legend.position = "none")
-dev.off()
+  theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=axis_title_size,face="bold"),axis.text.x=element_text(size=8),legend.position = "none")
 
 ### sister no metrics
-tiff("7_graphs/NO_intercept_geographic_distribution.tiff", units="in", width=3.5, height=3, res=600)
 no_plot = ggplot(data= sister_no_metrics, aes(x=state, y=intercept_no, fill= state)) +
   geom_point(aes(color=state),position = position_jitter(width = 0.07), size = 1.5, alpha = 0.25) +
   geom_boxplot(width = 0.2, outlier.shape = NA, alpha = 0.50)+
@@ -128,14 +126,15 @@ no_plot = ggplot(data= sister_no_metrics, aes(x=state, y=intercept_no, fill= sta
   scale_colour_manual(values=mycols)+
   xlab("geographic distribution")+ ylab("NO intercept")+
   scale_x_discrete(labels=c("AF" = "AF-endemic", "AFother" = "AF and other\ndomains", "other" = "outside AF"))+
-  theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=14,face="bold"),axis.text.x=element_text(size=8),legend.position = "none")
-dev.off()
+  theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=axis_title_size,face="bold"),axis.text.x=element_text(size=8),legend.position = "none")
 
 tiff("7_graphs/intercepts_data.tiff", units="in", width=6, height=2.5, res=600)
   ggarrange(ro_plot,no_plot, nrow=1,ncol=2)
 dev.off()
 
-############################## best-fit geosse-time estimates #################################
+####################### angular coefficients #################################
+
+###### best-fit geosse-time estimates 
 
 ### loading fit values and model parameters
 best_fit_models = read.table("geosse_time/geosse_time_best_fit_models.csv", sep=",", h = T)
@@ -174,19 +173,19 @@ se_line_b_dw =  mean_line_b - se_line_b
 # dataframe with all lines
 lines_b_df = data.frame(rbind(mean_line_b, se_line_b_up, se_line_b_dw))
 
-tiff("7_graphs/geosse_time_lambda_AF.tiff", units="in", width=3.5, height=3, res=600)
-ggplot() +
+### plotting
+axis_title_size = 10
+
+geo_time_plot = ggplot() +
   geom_segment(data = lines_b_df[1,], color="black", size=0.75, alpha=1,  aes(x = x1, y = y1, xend = xend, yend = yend), inherit.aes = FALSE)+
   geom_segment(data = lines_b_df[2,], color="black", size=0.5, alpha=0.5,  aes(x = x1, y = y1, xend = xend, yend = yend))+
   geom_segment(data = lines_b_df[3,], color="black", size=0.5, alpha=0.5,  aes(x = x1, y = y1, xend = xend, yend = yend))+
   geom_vline(aes(xintercept = c(0.05,2.58)),linetype="dotted",colour="gray",size=0.75)+
   ylim(y_lim)+
   xlab(x_axis_name)+ ylab(y_axis_name)+
-  theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=9,face="bold"),axis.text=element_text(size=6),legend.position = "none")
-dev.off()
+  theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=axis_title_size ,face="bold"),axis.text=element_text(size=6),legend.position = "none")
 
-
-############################## best-fit quasse estimates #################################
+###### best-fit quasse estimates 
 
 ### loading estimates from the best-fit quasse model
 lm_lin_params = read.table("quasse/lm_lin_params.csv", sep=",", h = T)
@@ -227,8 +226,9 @@ lines_df = data.frame(rbind(mean_line, se_line_up, se_line_dw))
 x_axis_name = "hypervolume size"
 y_axis_name = "lambda"
 
-tiff("7_graphs/quasse_lambda.tiff", units="in", width=3.5, height=3, res=600)
-ggplot() +
+### plotting
+axis_title_size = 10
+qua_plot = ggplot() +
   geom_segment(data = lines_df[1,], color="black", size=0.75, alpha=1,  aes(x = x1, y = y1, xend = xend, yend = yend), inherit.aes = FALSE)+
   geom_segment(data = lines_df[2,], color="black", size=0.5, alpha=0.5,  aes(x = x1, y = y1, xend = xend, yend = yend))+
   geom_segment(data = lines_df[3,], color="black", size=0.5, alpha=0.5,  aes(x = x1, y = y1, xend = xend, yend = yend))+
@@ -237,9 +237,11 @@ ggplot() +
   geom_vline(data= summary_hv, aes(xintercept = mean+se),linetype="dotted", colour= c(mycols), size=0.5)+
   ylim(y_lim)+
   xlab(x_axis_name) + ylab(y_axis_name)+
-  theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=9,face="bold"),axis.text=element_text(size=6),legend.position = "none")
-dev.off()
+  theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=axis_title_size,face="bold"),axis.text=element_text(size=6),legend.position = "none")
 
+tiff("7_graphs/angular_estimates.tiff", units="in", width=6, height=2.5, res=600)
+  ggarrange(qua_plot,geo_time_plot, nrow=1,ncol=2)
+dev.off()
 
 ############################## SUPPLEMENTARY MATERIAL ######################
 
