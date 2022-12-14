@@ -1,6 +1,7 @@
-setwd("C:/Users/eduar/Documents/GitHub/specialization_diversity_AF")
-
-library (phytools)
+library(rexpokit)
+library(cladoRcpp)
+library(BioGeoBEARS)
+library(phytools)
 library(tidyverse)
 library(PupillometryR)
 library(ggpubr)
@@ -14,6 +15,9 @@ library(reshape2)
 
 ### loading mcc phylogenetic tree
 mcc = read.tree("0_data/mcc_phylo.nwk")
+
+### number of alternative phylpogenetic trees
+n_phylo = length(list.files("0_data/100_trees"))
 
 ### loading species' altitude
 spp_altitude = read.table("0_data/spp_altitude.csv", sep=',', h=T)
@@ -41,33 +45,169 @@ names(geo_states) = spp_count_domain$species
 mycols = c( "#1E88E5", "#FFC107", "#D81B60")
 names(mycols) = c("AF", "AFother", "other")
 
-################################## Phylo tree and LTT plot ####################################
+################################## LTT plot ####################################
 
-### stochastic mapping
-# simulate character evolution
-maps = make.simmap(mcc, geo_states , model="ARD", pi='estimated', nsim=100)
+### create directory for DEC results
+# check if dir exists
+dir_check = dir.exists(paths="7_graphs/DEC_ancestral_reconstructions")
+# create dir if not created yet
+if (dir_check == FALSE){
+  dir.create(path= "7_graphs/DEC_ancestral_reconstructions", showWarnings = , recursive = FALSE, mode = "0777")
+}
 
-# choos one map
-n = 10
+# reading range data
+geog_fn = ("0_data/spp_distribution_af.data")
+moref(geog_fn)
 
-# count lineage through time
-ltt_obj = ltt(maps[[n]], plot=FALSE)
+# converting phylip format to tipranges
+tipranges = getranges_from_LagrangePHYLIP(lgdata_fn=geog_fn)
+tipranges
 
-# plot both!
-layout(matrix(c(1,2),2,1),heights=c(0.5,0.4))
-  plot(maps[[n]], mycols, ftype="off", mar=c(0,4.1,1.1,1.1))
-  grid( ny= NA)
-  par(mar=c(5.1,4.1,0,1.1))
-  plot(ltt_obj,colors=mycols,bty="n",las=1,lwd=3,show.tree=F, legend=T, ylim=c(1,Ntip(mcc)), xlab="time (above the root)")
-  legend("topleft",names(mycols),pch=22,pt.bg=mycols, bty="n",cex=0.8,pt.cex=1.2)
-  grid( ny= NA)
-simmap_ltt_plot = recordPlot()
+# setting maximum number of areas occupied for reconstructions
+max_range_size = max(rowSums(dfnums_to_numeric(tipranges@df)))
 
-tiff("7_graphs/simmap_ltt.tiff", units="in", width=4, height=6, res=600)
-  simmap_ltt_plot
+# Initialize DEC model
+BioGeoBEARS_run_object = define_BioGeoBEARS_run()
+
+# location of the geography text file
+BioGeoBEARS_run_object$geogfn = geog_fn
+
+# Input the maximum range size
+BioGeoBEARS_run_object$max_range_size = max_range_size
+
+# Min to treat tip as a direct ancestor (no speciation event)
+BioGeoBEARS_run_object$min_branchlength = 0.001    
+
+# set to FALSE for e.g. DEC* model, DEC*+J, etc.
+BioGeoBEARS_run_object$include_null_range = FALSE    
+
+# computing options
+BioGeoBEARS_run_object$num_cores_to_use = 1
+
+# Good default settings to get ancestral states
+BioGeoBEARS_run_object$return_condlikes_table = TRUE
+BioGeoBEARS_run_object$calc_TTL_loglike_from_condlikes_table = TRUE
+BioGeoBEARS_run_object$calc_ancprobs = TRUE    # get ancestral states from optim run
+
+### DEC over trees 
+for (i in 1:n_phylo){ 
+  # phylogeny tree location
+  trfn = paste("0_data/100_trees/tree_", as.character(i), sep="")
+  tr = read.tree(trfn)
+  # n tips and nodes
+  n_tips = Ntip(tr)
+  n_nodes = tr$Nnode
+  # inputting tree into DEC
+  BioGeoBEARS_run_object$trfn = trfn
+  # fitting DEC
+  res_DEC = bears_optim_run(BioGeoBEARS_run_object)
+  # node marginal ML
+  relprobs_matrix = res_DEC$ML_marginal_prob_each_state_at_branch_top_AT_node
+  # node states
+  state_labels=c("AF", "other", "AFother")
+  node_states = get_ML_states_from_relprobs(relprobs=relprobs_matrix, statenames=state_labels, returnwhat = "states", if_ties = "takefirst")
+  # getting only ancestral nodes
+  anc_node = (n_tips+1):(n_tips+n_nodes)
+  state = node_states[anc_node]
+  anc_node_states = data.frame(anc_node, state)
+  write.table(anc_node_states , paste("7_graphs/DEC_ancestral_reconstructions/anc_node_states",as.character(i), sep="_"), sep=",", row.names=F, quote=F)
+}
+
+### joinging reconstruction across trees 
+anc_data = c()
+for (i in 1:n_phylo){ 
+  # phylogeny tree location
+  trfn = paste("0_data/100_trees/tree_", as.character(i), sep="")
+  tr = read.tree(trfn)
+  # n tips and nodes
+  n_tips = Ntip(tr)
+  n_nodes = tr$Nnode
+  # node ages
+  node_ages = round(node.depth.edgelength(tr),5)
+  present = round(max(node_ages), 5)
+  node_ages = node_ages - present
+  # ancestral node ages
+  anc_node_ages = node_ages[(n_tips+1):(n_tips+n_nodes)]
+  # ancestral biogeographic state
+  dec_fn = paste("7_graphs/DEC_ancestral_reconstructions/anc_node_states",as.character(i), sep="_")
+  anc_node_states = read.table(dec_fn, sep=",", h=T)
+  # join into dataframe
+  one_anc_datum = data.frame(anc_node_states, anc_node_ages)
+  # update!
+  anc_data = rbind(anc_data, one_anc_datum)
+}
+
+### dividing into time intervals
+# time boundaries
+old_age = round(min(anc_data$anc_node_ages),2)
+new_age = 0
+# intervals
+intervals = anc_data$anc_node_ages
+breaks = round(seq(new_age, old_age, by= (old_age - new_age)/8),2)
+for (i in 1:length(breaks)){
+  intervals[which(anc_data$anc_node_ages >= breaks[i+1] & anc_data$anc_node_ages < breaks[i])] = round((breaks[i] + breaks[i+1])/2, 2)
+}
+anc_data$intervals = intervals
+
+### cumulative lineage count per group in each interval across tree
+initial_indexes = seq(1 , nrow(anc_data), by=65)
+all_tree_sums = c()
+for (i in initial_indexes){
+  one_tree_data = anc_data[i:(i+64),]
+  split_by_state = split(one_tree_data, f= one_tree_data$state)
+  all_sums_df = c()
+  for (ii in 1:length(split_by_state)){
+    count = table(split_by_state[[ii]]$intervals)
+    cum_sum = cumsum(count)
+    state = rep(names(split_by_state)[[ii]], length(count))
+    inter_age = names(count)
+    one_state_df= data.frame(state, cum_sum, inter_age)
+    all_sums_df = rbind(all_sums_df, one_state_df)
+  }
+  all_tree_sums = rbind(all_tree_sums, all_sums_df)
+}
+
+### summarize cumulative counts across trees
+# split by state
+split_by_state = split(all_tree_sums, f=all_tree_sums$state)
+# empty object to receive final resutls
+ltt_df = c()
+for (i in 1:length(split_by_state)){
+  state_data = split_by_state[[i]]
+  state_name = names(split_by_state)[i]
+  n_estimates = aggregate(state_data$cum_sum, by=list(state_data$inter_age), length)
+  mean_count = aggregate(state_data$cum_sum, by=list(state_data$inter_age), mean)
+  sd_count = aggregate(state_data$cum_sum, by=list(state_data$inter_age), sd)
+  state = rep(state_name, nrow(n_estimates))
+  one_state_df = data.frame(state,n_estimates,mean_count$x, sd_count$x)
+  ltt_df  = rbind(ltt_df , one_state_df)
+}
+
+# naming some columns
+colnames(ltt_df)[2:5] = c("inter_age", "n", "central", "dispersion")
+ltt_df$inter_age = as.numeric(ltt_df$inter_age) 
+
+# creating confidence intervals
+ci = 1.96 * (ltt_df$dispersion / sqrt(ltt_df$n))
+ltt_df$ci = ci
+
+### plotting
+# text size
+axis_title_size = 10
+x_text_size = 8
+
+tiff("7_graphs/ltt_plot.tiff", units="cm", width=7, height=6.5, res=600)
+ggplot(data= ltt_df, aes(x=inter_age, y=central, group= state, color=state) ) +
+  geom_point(size = 1.2, alpha = 1) +
+  geom_line(size=1)+
+  geom_errorbar(size=1, width=0, aes(ymin=central-ci, ymax=central+ci))+
+  geom_vline(xintercept = -2.58,linetype="dotted", colour= "black", size=0.5)+
+  scale_colour_manual(values=mycols)+
+  xlab("time before present (m.y.a.)")+ ylab("n lineages")+
+  theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=axis_title_size,face="bold"),axis.text.x=element_text(size=x_text_size),axis.text.y = element_text(angle = 90),legend.position = "none")
 dev.off()
 
-####################### Describing altitude, time, and niche breadth #############
+####################### Describing altitude and niche breadth #############
 
 ### loading species altitude and niche breadth
 spp_altitude = data.frame(geo_states, spp_altitude)
@@ -94,7 +234,7 @@ hv_plot = ggplot(data= spp_hvolumes, aes(x=geo_states, y=hvolume, fill= geo_stat
   scale_x_discrete(labels=c("AF" = "AF-endemic", "AFother" = "AF and other", "other" = "outside AF"))+
   theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=axis_title_size,face="bold"),axis.text.x=element_text(size=x_text_size),legend.position = "none")
 
-tiff("7_graphs/species_data.tiff", units="in", width=3, height=5, res=600)
+tiff("7_graphs/species_data.tiff", units="cm", width=7, height=5, res=600)
   ggarrange(alt_plot,hv_plot, nrow=2,ncol=1)
 dev.off()
 
@@ -239,7 +379,7 @@ qua_plot = ggplot() +
   xlab(x_axis_name) + ylab(y_axis_name)+
   theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=axis_title_size,face="bold"),axis.text=element_text(size=6),legend.position = "none")
 
-tiff("7_graphs/angular_estimates.tiff", units="in", width=6, height=2.5, res=600)
+tiff("7_graphs/angular_estimates.tiff", units="cm", width=15, height=2.5, res=600)
   ggarrange(qua_plot,geo_time_plot, nrow=1,ncol=2)
 dev.off()
 
