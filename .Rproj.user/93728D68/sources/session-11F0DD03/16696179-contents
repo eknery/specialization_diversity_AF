@@ -16,7 +16,7 @@ names(hvolumes) = spp_hvolumes$specie
 trait_values= sqrt(hvolumes) # hvolumes
 
 ### sampling error
-se_trait = sd(trait_values)/length(trait_values)
+se_trait = stats::sd(trait_values)/ sqrt(length(trait_values))
 
 ############################### fitting models across trees  ##########################
 const_params = c()
@@ -27,7 +27,7 @@ model_fit_list = list()
 ### setting optimization settings
 control = list(parscale=0.1, reltol=0.001)
 
-for (i in 1:length(1)){ ###########  < phylo_trees
+for (i in 1:length(phylo_trees)){ ###########  
   ### pick a phylogenetic tree
   one_tree = phylo_trees[[i]] 
   ### starting parameter values and linear function

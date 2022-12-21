@@ -16,7 +16,7 @@ names(hvolumes) = spp_hvolumes$specie
 trait_values= sqrt(hvolumes) # hvolumes
 
 ### sampling error
-se_trait = sd(trait_values)/length(trait_values)
+se_trait = stats::sd(trait_values)/ sqrt(length(trait_values))
 
 ############################### fitting models across trees  ##########################
 const_params = c()
