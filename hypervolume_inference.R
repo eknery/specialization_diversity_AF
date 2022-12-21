@@ -1,5 +1,3 @@
-setwd("C:/Users/eduar/Documents/GitHub/specialization_endemism_AF")
-
 ### packages
 library(raster)
 library(sp)
@@ -198,56 +196,36 @@ for (sp_name in all_spp_names){
 hv_scale_values = hv_scale_values[-1,]
 
 # exporting
-write.table(hv_scale_values, "3_hypervolume_inference/hv_scale_values.csv", sep=',', quote=F, row.names=F)
-write.table(hv_scale_positions, "3_hypervolume_inference/hv_scale_positions.csv", sep=',', quote=F, row.names=F)
-write.table(spp_hvolumes, "3_hypervolume_inference/spp_hvolumes.csv", sep=',', quote=F, row.names=F)
+write.table(hv_scale_values, "1_hypervolume_inference/hv_scale_values.csv", sep=',', quote=F, row.names=F)
+write.table(hv_scale_positions, "1_hypervolume_inference/hv_scale_positions.csv", sep=',', quote=F, row.names=F)
+write.table(spp_hvolumes, "1_hypervolume_inference/spp_hvolumes.csv", sep=',', quote=F, row.names=F)
 
-### setting regimes
-spp_hvolumes = read.table("3_hypervolume_inference/spp_hvolumes.csv", sep=',', h=T)
-spp_geographic_distribution = read.table("1_geographic_classification/spp_geographic_distribution.csv", sep=',', h=T)
-regimes = data.frame(spp_geographic_distribution, spp_hvolumes$hvolume)
-colnames(regimes)[3] = "hvolume"
+############################# supp hypervolume distribution #######################
 
-# exporting
-write.table(regimes, "3_hypervolume_inference/regimes_hvolumes.csv", sep=',', quote=F, row.names=F)
+library(tidyverse)
+library(PupillometryR)
+library(ggpubr)
+library(readr)
+library(tidyr)
+library(ggplot2)
+library(Hmisc)
+library(plyr)
+library(RColorBrewer)
+library(reshape2)
+library(colorspace)
 
-############################# calculating differences and effects #################
-regimes_hvolumes = read.table("3_hypervolume_inference/regimes_hvolumes.csv", header =T, sep=",",  na.strings = "NA", fill=T)
+# input data
+spp_hvolumes = read.table("1_hypervolume_inference/spp_hvolumes.csv", sep=',', h=T)
 
-state_overall_hv = aggregate(regimes_hvolumes$hvolume, list(regimes_hvolumes$state), median)
-state_iqr_hv = aggregate(regimes_hvolumes$hvolume, list(regimes_hvolumes$state), IQR )
+tiff("1_hypervolume_inference/supp_histogram_HV.tiff", units="cm", width=7, height=6, res=600)
+ggplot(data=spp_hvolumes, aes(hvolume)) + 
+  geom_histogram(binwidth=1)+
+  xlab("Hypervolume size")+ ylab("number of species")+
+  theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=12,face="bold"),axis.text=element_text(size=10),legend.position = "none")
+dev.off()
 
-(state_overall_hv$x[1] - state_overall_hv$x[2])/ state_overall_hv$x[2]
-(state_overall_hv$x[1] - state_overall_hv$x[3])/ state_overall_hv$x[3]
-
-state_iqr_rao
-
-############################## back transforming values ###########################
-
-#loading z-scale values
-hv_scale_values = read.table("3_hypervolume_inference/hv_scale_values.csv", header =T, sep=",",  na.strings = "NA", fill=T)
-scale_values= hv_scale_values[,2:5]
-
-#back transforming each column
-env_values = c()
-for (j in 1:ncol(scale_values)){
-  env_values = cbind(env_values, c((ras_sds[j]* scale_values[,j]) + ras_means[j]) )
-}
-
-# organizing
-hv_env_values = data.frame(hv_scale_values$species, env_values)
-colnames(hv_env_values) = colnames(hv_scale_values)
-
-# getting iqr scale values
-iqr = function(x){
-  q= quantile(x, probs = c(0.25, 0.75) )
-  iqr = as.numeric(q[2] - q[1])
-  return(iqr)
-}
-iqr_env_values = aggregate(hv_env_values[,2:5], by=list(hv_env_values[,1]), iqr)
-colnames(iqr_env_values)[1] = "species"
-
-#exporting
-write.table(hv_env_values, "3_hypervolume_inference/hv_env_values.csv", sep=',', quote=F, row.names=F)
-write.table(iqr_env_values, "3_hypervolume_inference/iqr_env_values.csv", sep=',', quote=F, row.names=F)
+ggplot(data=spp_hvolumes, aes(sqrt(hvolume) )) + 
+  geom_histogram(binwidth=1)+
+  xlab("Hypervolume size")+ ylab("number of species")+
+  theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=12,face="bold"),axis.text=element_text(size=10),legend.position = "none")
 
