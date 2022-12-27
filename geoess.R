@@ -117,7 +117,10 @@ common_model = names(which(table(best_fit_models$model_name) == most_repeated) )
 common_scenario = which(best_fit_models$model_name == common_model)
 common_params = sd_params[common_scenario,]
 
-### descriptive statistics
-apply(common_params, MARGIN = 2, FUN=mean)
-apply(common_params, MARGIN = 2, FUN=summary)
+### effect measure
+rel_s_diff = (common_params$sB - common_params$sA) / common_params$sA
 
+### descriptive statistics
+mean(rel_s_diff)
+ci_calculator = function(x){ 1.96* ( sd(x)/sqrt( length(x) ) ) } 
+ci_calculator(rel_s_diff)

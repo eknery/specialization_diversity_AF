@@ -1,5 +1,3 @@
-setwd("C:/Users/eduar/Documents/GitHub/specialization_diversity_AF")
-
 ### packages
 library(raster)
 library(rgeos)
@@ -189,27 +187,31 @@ write.table(sister_no_metrics, "2_sister_hypervolume/sister_no_metrics.csv", sep
 
 sister_no_metrics = read.table("2_sister_hypervolume/sister_no_metrics.csv", sep=',', h=T)
 
-### summarizing metrics 
-means = aggregate(sister_no_metrics$intercept_no, by = list(sister_no_metrics$state), mean )
-aggregate(sister_no_metrics$intercept_no, by = list(sister_no_metrics$state), sd )
-
-diff_12 = means$x[1] -  means$x[2]
-diff_13 = means$x[1] -  means$x[3]
-diff_23 = means$x[2] -  means$x[3]
-
-### permutation test
-rand_diff_12 = rand_diff_13 = rand_diff_23 = c()
-for( i in 1:1000){
-  rand_state = sample(sister_ro_metrics$state)
-  rand_means =aggregate(sister_ro_metrics$intercept_ro, by = list(rand_state), mean )
-  rand_diff_12[i] = rand_means$x[1] - rand_means$x[2]
-  rand_diff_13[i] = rand_means$x[1] - rand_means$x[3]
-  rand_diff_23[i] = rand_means$x[2] - rand_means$x[3]
+# source function
+source("function_permutation_test.R")
+# set factor
+no_metrics_split = split(sister_no_metrics, f=sister_no_metrics$state)
+# loop over traits
+all_pvalues = c()
+for(i in 1:(length(no_metrics_split)-1) ){
+  for(j in (i+1):length(no_metrics_split) ){
+    # select data by state
+    i_df = no_metrics_split[[i]]
+    j_df = no_metrics_split[[j]]
+    # state name
+    i_name =unique(i_df$state)
+    j_name =unique(j_df$state)
+    # joing data into single df
+    ij_df = rbind(i_df, j_df)
+    pair_name = paste(i_name, j_name, sep="_")
+    # set variable 
+    response = ij_df$intercept_no
+    factor = ij_df$state
+    # test
+    pvalue = permutation_test(factor = factor, response = response, stats="mean", iter=999, out_dir="2_sister_hypervolume",  name= paste(pair_name, ".tiff", sep=""))
+    names(pvalue) = pair_name
+    all_pvalues = c(all_pvalues, pvalue)
+  }
 }
 
-
-1 - ( sum(diff_12 < rand_diff_12)/1001 )
-1 - ( sum(diff_13 < rand_diff_13)/1001 )
-1 - ( sum(diff_23 > rand_diff_23)/1001 )
-
-
+all_pvalues

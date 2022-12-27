@@ -27,7 +27,7 @@ model_fit_list = list()
 ### setting optimization settings
 control = list(parscale=0.1, reltol=0.001)
 
-for (i in 1:length(1)){ ###########  < phylo_trees
+for (i in 1:length(phylo_trees)){ ###########  
   ### pick a phylogenetic tree
   one_tree = phylo_trees[[i]] 
   ### starting parameter values and linear function
@@ -130,9 +130,6 @@ const_params = read.table("6_quasse/const_params.csv", sep=",",  h = T)
 l_lin_params = read.table("6_quasse/l_lin_params.csv", sep=",",  h = T)
 lm_lin_params = read.table("6_quasse/lm_lin_params.csv", sep=",", h = T)
 
-
-lm_lin_params
-
 ### most common model
 most_repeated = max(table(best_fit_models$model_name))
 common_model = names(which(table(best_fit_models$model_name) == most_repeated) ) 
@@ -141,5 +138,5 @@ common_params = lm_lin_params[common_scenario,]
 
 ### descriptive statistics
 apply(common_params, MARGIN = 2, FUN=mean)
-apply(common_params, MARGIN = 2, FUN=sd)
+apply(common_params, MARGIN = 2, FUN= function(x){ 1.96* ( sd(x)/sqrt( length(x) ) ) } )
 

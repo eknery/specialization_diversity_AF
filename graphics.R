@@ -226,7 +226,7 @@ ltt_df$ci = ci
 axis_title_size = 10
 x_text_size = 8
 
-ltt-plot = ggplot(data= ltt_df, aes(x=inter_age, y=central, group= state, color=state) ) +
+ltt_plot = ggplot(data= ltt_df, aes(x=inter_age, y=central, group= state, color=state) ) +
   geom_point(size = 1, alpha = 1) +
   geom_line(size=1)+
   geom_errorbar(size=1, width=0, aes(ymin=central-ci, ymax=central+ci))+
@@ -288,8 +288,8 @@ ro_plot = ggplot(data= sister_ro_metrics, aes(x=state, y=intercept_ro, fill= sta
   geom_flat_violin(position = position_nudge(x = 0.12, y = 0), alpha = 0.50) +
   scale_fill_manual(values=mycols)+
   scale_colour_manual(values=mycols)+
-  xlab("geographic distribution")+ ylab("RO intercept")+
   scale_x_discrete(labels=c("AF" = "AF-endemic", "AFother" = "AF and other\ndomains", "other" = "outside AF"))+
+  xlab("geographic distribution")+ ylab("RO intercept")+
   theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=axis_title_size,face="bold"),axis.text.x=element_text(size=x_text_size),legend.position = "none")
 
 ### sister no metrics
@@ -299,15 +299,58 @@ no_plot = ggplot(data= sister_no_metrics, aes(x=state, y=intercept_no, fill= sta
   geom_flat_violin(position = position_nudge(x = 0.12, y = 0), alpha = 0.50) +
   scale_fill_manual(values=mycols)+
   scale_colour_manual(values=mycols)+
-  xlab("geographic distribution")+ ylab("NO intercept")+
   scale_x_discrete(labels=c("AF" = "AF-endemic", "AFother" = "AF and other\ndomains", "other" = "outside AF"))+
+  xlab("geographic distribution")+ ylab("NO intercept")+
   theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=axis_title_size,face="bold"),axis.text.x=element_text(size=x_text_size),legend.position = "none")
 
 tiff("7_graphs/intercepts_data.tiff", units="cm", width=14, height=6.5, res=600)
   ggarrange(ro_plot,no_plot, nrow=1,ncol=2)
 dev.off()
 
-####################### GeoSSE estimates #################################
+######################## GeoSSE estimates ###################################
+
+### loading fit values and model parameters
+best_fit_models = read.table("4_geosse/geosse_best_fit_models.csv", sep=",", h = T)
+sd_params = read.table("4_geosse/sd_params.csv", sep=",",  h = T)
+
+### most common model
+most_repeated = max(table(best_fit_models$model_name))
+common_model = names(which(table(best_fit_models$model_name) == most_repeated) ) 
+common_scenario = which(best_fit_models$model_name == common_model)
+common_params = sd_params[common_scenario,]
+
+### organizing estimates
+state = c(rep("other", length(common_params$sA)),rep("AF", length(common_params$sB)))
+s_estimates = c(common_params$sA, common_params$sB)
+s_df = data.frame(state, s_estimates)
+
+### summarizing estimates
+ci_calculator = function(x){ 1.96* ( sd(x)/sqrt( length(x) ) ) }
+mean_s = aggregate(s_df$s_estimates, by= list(s_df$state), mean)
+ci_s = aggregate(s_df$s_estimates, by= list(s_df$state), ci_calculator)
+mean_s_df = data.frame(mean_s, ci_s$x)
+colnames(mean_s_df) = c("state", "mean_s", "ci_s")
+
+### plotting
+# axis title size
+axis_title_size = 10
+# axis names
+x_axis_name = "geographic distribution"
+y_axis_name = "lambda"
+
+geo_plot= ggplot(data=mean_s_df, aes(color=state)) +
+  geom_point(data=mean_s_df,mapping=aes(x=state, y=mean_s)) +
+  geom_errorbar(data=mean_s_df, size=1, width=0.1,mapping=aes(x=state, ymin=mean_s-ci_s, ymax=mean_s+ci_s))+
+  scale_colour_manual(values=mycols[-2])+
+  scale_x_discrete(labels=c("AF" = "AF-endemic", "other" = "outside AF"))+
+  xlab(x_axis_name)+ ylab(y_axis_name)+
+  theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=axis_title_size ,face="bold"),axis.text=element_text(size=6),legend.position = "none")
+
+tiff("7_graphs/geosse_estimates.tiff", units="cm", width=7, height=6, res=600)
+  geo_plot
+dev.off()
+
+####################### time-GeoSSE estimates #################################
 
 ### loading fit values and model parameters
 best_fit_models = read.table("5_geosse_time/geosse_time_best_fit_models.csv", sep=",", h = T)
@@ -322,7 +365,6 @@ frequent_model_params = sd_s_lin_params[frequent_model_n,]
 ### common values
 x1 = rep(0, nrow(frequent_model_params))
 xend = rep(3.5, nrow(frequent_model_params))
-y_lim=c(0,1)
 
 ### parameters per group
 
@@ -382,11 +424,7 @@ geo_time_plot = ggplot() +
   geom_segment(data = lines_b_df[1,], color=mycols[1], size=0.75, alpha=1,  aes(x = x1, y = y1, xend = xend, yend = yend), inherit.aes = FALSE)+
   geom_segment(data = lines_b_df[2,], color=mycols[1], size=0.5, alpha=0.5,  aes(x = x1, y = y1, xend = xend, yend = yend))+
   geom_segment(data = lines_b_df[3,], color=mycols[1], size=0.5, alpha=0.5,  aes(x = x1, y = y1, xend = xend, yend = yend))+
-  geom_segment(data = lines_ab_df[1,], color=mycols[2], size=0.75, alpha=1,  aes(x = x1, y = y1, xend = xend, yend = yend), inherit.aes = FALSE)+
-  geom_segment(data = lines_ab_df[2,], color=mycols[2], size=0.5, alpha=0.5,  aes(x = x1, y = y1, xend = xend, yend = yend))+
-  geom_segment(data = lines_ab_df[3,], color=mycols[2], size=0.5, alpha=0.5,  aes(x = x1, y = y1, xend = xend, yend = yend))+
   geom_vline(aes(xintercept = c(-0.05,-2.58)),linetype="dotted",colour="gray",size=0.75)+
-  ylim(y_lim)+
   xlab(x_axis_name)+ ylab(y_axis_name)+
   theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=axis_title_size ,face="bold"),axis.text=element_text(size=6),legend.position = "none")
 
@@ -403,8 +441,7 @@ common_params = lm_lin_params
 
 ### common values
 x1 = rep(0, nrow(common_params))
-xend = rep(max(hvolumes), nrow(common_params))
-y_lim=c(0,1)
+xend = rep(max(sqrt(hvolumes) ), nrow(common_params))
 
 ###  mean line 
 intercepts = common_params$l.c 
