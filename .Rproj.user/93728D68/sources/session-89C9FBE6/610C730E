@@ -1,0 +1,26 @@
+{
+    "id": "610C730E",
+    "path": "~/GitHub/specialization_diversity_AF/sister_hypervolume.R",
+    "project_path": "sister_hypervolume.R",
+    "type": "r_source",
+    "hash": "0",
+    "contents": "",
+    "dirty": false,
+    "created": 1672669840993.0,
+    "source_on_save": false,
+    "relative_order": 5,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "207,24",
+        "scrollLine": "200"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1671729609,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1671729609,
+    "read_only": false,
+    "read_only_alternatives": []
+}

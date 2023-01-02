@@ -140,3 +140,6 @@ common_params = lm_lin_params[common_scenario,]
 apply(common_params, MARGIN = 2, FUN=mean)
 apply(common_params, MARGIN = 2, FUN= function(x){ 1.96* ( sd(x)/sqrt( length(x) ) ) } )
 
+### export best-fit model parameters
+write.table(common_params, "6_quasse/quasse_best_fit_params.csv", sep=",", quote=F, row.names = F)
+

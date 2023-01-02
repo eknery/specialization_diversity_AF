@@ -124,3 +124,6 @@ rel_s_diff = (common_params$sB - common_params$sA) / common_params$sA
 mean(rel_s_diff)
 ci_calculator = function(x){ 1.96* ( sd(x)/sqrt( length(x) ) ) } 
 ci_calculator(rel_s_diff)
+
+### export best-fit model parameters
+write.table(common_params, "4_geosse/geosse_best_fit_params.csv", sep=",", quote=F, row.names = F)
