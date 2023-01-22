@@ -45,6 +45,15 @@ names(geo_states) = spp_count_domain$species
 mycols = c( "#1E88E5", "#FFC107", "#D81B60")
 names(mycols) = c("AF", "AFother", "other")
 
+######################## AF% distribution #################################
+
+tiff("1_hypervolume_inference/supp_histogram_HV.tiff", units="cm", width=7, height=6, res=600)
+ggplot(data=spp_hvolumes, aes(sqrt(hvolume))) + 
+  geom_histogram(binwidth=1)+
+  xlab("Hypervolume size")+ ylab("number of species")+
+  theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=10,face="bold"),axis.text=element_text(size=8),legend.position = "none")
+dev.off()
+
 ################################## DEC reconstruction ################################
 
 ### create directory for DEC results
@@ -173,7 +182,7 @@ old_age = round(min(anc_data$anc_node_ages),2)
 new_age = 0
 # intervals
 intervals = anc_data$anc_node_ages
-breaks = round(seq(new_age, old_age, by= (old_age - new_age)/8),2)
+breaks = round(seq(new_age, old_age, by= (old_age - new_age)/12),2)
 for (i in 1:length(breaks)){
   intervals[which(anc_data$anc_node_ages >= breaks[i+1] & anc_data$anc_node_ages < breaks[i])] = round((breaks[i] + breaks[i+1])/2, 2)
 }
@@ -227,7 +236,7 @@ axis_title_size = 10
 x_text_size = 8
 
 ltt_plot = ggplot(data= ltt_df, aes(x=inter_age, y=central, group= state, color=state) ) +
-  geom_point(size = 1, alpha = 1) +
+  geom_point(size = 0.5, alpha = 1) +
   geom_line(size=1)+
   geom_errorbar(size=1, width=0, aes(ymin=central-ci, ymax=central+ci))+
   geom_vline(xintercept = -2.58,linetype="dotted", colour= "black", size=0.5)+
@@ -258,7 +267,7 @@ alt_plot = ggplot(data= spp_altitude, aes(x=geo_states, y=altitude, fill= geo_st
   scale_x_discrete(labels=c("AF" = "AF-endemic", "AFother" = "AF and other", "other" = "outside AF"))+
   theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=axis_title_size,face="bold"),axis.text.x=element_text(size=x_text_size),axis.text.y = element_text(angle = 90),legend.position = "none")
 
-hv_plot = ggplot(data= spp_hvolumes, aes(x=geo_states, y=hvolume, fill= geo_states)) +
+hv_plot = ggplot(data= spp_hvolumes, aes(x=geo_states, y=sqrt(hvolume), fill= geo_states)) +
   geom_point(aes(color=geo_states),position = position_jitter(width = 0.07), size = 1.5, alpha = 0.25) +
   geom_boxplot(width = 0.4, outlier.shape = NA, alpha = 0.50)+
   scale_fill_manual(values=mycols)+
@@ -288,7 +297,7 @@ ro_plot = ggplot(data= sister_ro_metrics, aes(x=state, y=intercept_ro, fill= sta
   geom_flat_violin(position = position_nudge(x = 0.12, y = 0), alpha = 0.50) +
   scale_fill_manual(values=mycols)+
   scale_colour_manual(values=mycols)+
-  scale_x_discrete(labels=c("AF" = "AF-endemic", "AFother" = "AF and other\ndomains", "other" = "outside AF"))+
+  scale_x_discrete(labels=c("AF" = "AF-endemic", "AFother" = "AF and other", "other" = "outside AF"))+
   xlab("geographic distribution")+ ylab("RO intercept")+
   theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=axis_title_size,face="bold"),axis.text.x=element_text(size=x_text_size),legend.position = "none")
 
@@ -299,7 +308,7 @@ no_plot = ggplot(data= sister_no_metrics, aes(x=state, y=intercept_no, fill= sta
   geom_flat_violin(position = position_nudge(x = 0.12, y = 0), alpha = 0.50) +
   scale_fill_manual(values=mycols)+
   scale_colour_manual(values=mycols)+
-  scale_x_discrete(labels=c("AF" = "AF-endemic", "AFother" = "AF and other\ndomains", "other" = "outside AF"))+
+  scale_x_discrete(labels=c("AF" = "AF-endemic", "AFother" = "AF and other", "other" = "outside AF"))+
   xlab("geographic distribution")+ ylab("NO intercept")+
   theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=axis_title_size,face="bold"),axis.text.x=element_text(size=x_text_size),legend.position = "none")
 

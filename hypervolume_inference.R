@@ -218,14 +218,9 @@ library(colorspace)
 spp_hvolumes = read.table("1_hypervolume_inference/spp_hvolumes.csv", sep=',', h=T)
 
 tiff("1_hypervolume_inference/supp_histogram_HV.tiff", units="cm", width=7, height=6, res=600)
-ggplot(data=spp_hvolumes, aes(hvolume)) + 
+ggplot(data=spp_hvolumes, aes(sqrt(hvolume))) + 
   geom_histogram(binwidth=1)+
   xlab("Hypervolume size")+ ylab("number of species")+
-  theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=12,face="bold"),axis.text=element_text(size=10),legend.position = "none")
+  theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=10,face="bold"),axis.text=element_text(size=8),legend.position = "none")
 dev.off()
-
-ggplot(data=spp_hvolumes, aes(sqrt(hvolume) )) + 
-  geom_histogram(binwidth=1)+
-  xlab("Hypervolume size")+ ylab("number of species")+
-  theme(panel.background=element_rect(fill="white"), panel.grid=element_line(colour=NULL),panel.border=element_rect(fill=NA,colour="black"),axis.title=element_text(size=12,face="bold"),axis.text=element_text(size=10),legend.position = "none")
 
